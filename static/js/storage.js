@@ -167,9 +167,19 @@
     todayISO,
     formatDisplayDate,
     formatFileDate,
+    STORAGE_KEY: STORAGE_KEY,
 
     getAll() {
       return load();
+    },
+
+    /** Full replace of store — used only by backup import (replace mode). */
+    writeAll(data) {
+      const next = data && typeof data === "object" ? data : emptyStore();
+      if (!next.rooms) next.rooms = {};
+      if (next.version == null) next.version = 1;
+      save(next);
+      return next;
     },
 
     getRoom(roomNumber) {
@@ -181,6 +191,36 @@
       const room = this.getRoom(roomNumber);
       if (!room) return null;
       return room.inspections[String(inspectionNumber)] || null;
+    },
+
+    getConflictCopies(roomNumber) {
+      const room = this.getRoom(roomNumber);
+      if (!room || !Array.isArray(room.conflictCopies)) return [];
+      return room.conflictCopies.slice();
+    },
+
+    getConflictCopy(roomNumber, conflictId) {
+      const list = this.getConflictCopies(roomNumber);
+      for (let i = 0; i < list.length; i++) {
+        if (list[i] && list[i].id === conflictId) return list[i];
+      }
+      return null;
+    },
+
+    saveConflictInspection(roomNumber, conflictId, inspection) {
+      const store = load();
+      const room = store.rooms[String(roomNumber)];
+      if (!room || !Array.isArray(room.conflictCopies)) return null;
+      for (let i = 0; i < room.conflictCopies.length; i++) {
+        if (room.conflictCopies[i].id === conflictId) {
+          room.conflictCopies[i].inspection = inspection;
+          room.conflictCopies[i].inspection.updatedAt = new Date().toISOString();
+          room.updatedAt = room.conflictCopies[i].inspection.updatedAt;
+          save(store);
+          return room.conflictCopies[i];
+        }
+      }
+      return null;
     },
 
     listRooms() {
