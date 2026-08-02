@@ -58,12 +58,28 @@
             <span class="tile-title">יצירת PDF</span>
             <span class="tile-desc">יצירת קובץ מתוך בדיקה שמורה</span>
           </button>
+          <button type="button" class="home-tile" id="nav-export-backup">
+            <span class="tile-icon" aria-hidden="true">⇩</span>
+            <span class="tile-title">ייצוא גיבוי מלא</span>
+            <span class="tile-desc">שמירת כל החדרים לקובץ במכשיר</span>
+          </button>
+          <button type="button" class="home-tile" id="nav-import-merge">
+            <span class="tile-icon" aria-hidden="true">⇧</span>
+            <span class="tile-title">ייבוא ומיזוג</span>
+            <span class="tile-desc">הוספת גיבוי בלי למחוק נתונים קיימים</span>
+          </button>
+          <button type="button" class="home-tile" id="nav-import-replace">
+            <span class="tile-icon" aria-hidden="true">⇪</span>
+            <span class="tile-title">ייבוא גיבוי</span>
+            <span class="tile-desc">ייבוא עם אפשרות החלפה — דורש אישור</span>
+          </button>
           <button type="button" class="home-tile home-tile-muted" id="nav-about">
             <span class="tile-icon" aria-hidden="true">ⓘ</span>
             <span class="tile-title">אודות האפליקציה</span>
             <span class="tile-desc">מידע קצר על המערכת</span>
           </button>
         </div>
+        <input type="file" id="backup-file-input" accept="application/json,.json" hidden>
       </section>
 
       <!-- NEW INSPECTION -->
@@ -241,6 +257,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="static/js/checklist-data.js"></script>
   <script src="static/js/storage.js"></script>
+  <script src="static/js/backup.js"></script>
   <script src="static/js/pdf.js"></script>
   <script src="static/js/app.js"></script>
 </body>
