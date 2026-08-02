@@ -21,7 +21,6 @@
   --max: 720px;
   --bg-phone: url("../IMG/PCOG.png");
   --bg-desk: url("../IMG/CCOG.png");
-  --bg-overlay: rgba(245, 248, 250, 0.42);
 }
 
 *,
@@ -41,33 +40,29 @@ body {
   color: var(--ink);
   min-height: 100vh;
   line-height: 1.45;
-  background-color: var(--bg0);
+  background: transparent;
   position: relative;
 }
 
-/* Background layer — avoids background-attachment:fixed (causes tear/jank on phones) */
+/* Single photo background only — no white wash layer */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background-color: var(--bg0);
-  background-image:
-    linear-gradient(var(--bg-overlay), var(--bg-overlay)),
-    var(--bg-phone);
-  background-size: cover, cover;
-  background-position: center, center;
-  background-repeat: no-repeat, no-repeat;
+  background-color: #1a2a32;
+  background-image: var(--bg-phone);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 /* Desktop: CCOG */
 @media (min-width: 768px) {
   body::before {
-    background-image:
-      linear-gradient(rgba(245, 248, 250, 0.38), rgba(245, 248, 250, 0.38)),
-      var(--bg-desk);
-    background-position: center, center 40%;
+    background-image: var(--bg-desk);
+    background-position: center 40%;
   }
 }
 
