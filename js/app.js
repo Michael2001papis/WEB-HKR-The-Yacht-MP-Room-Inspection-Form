@@ -1,0 +1,1031 @@
+/**
+ * Main application UI and navigation.
+ */
+(function () {
+  const screens = {};
+  let saveTimer = null;
+  let saveState = "idle"; // idle | saving | saved
+  let current = {
+    roomNumber: null,
+    inspectionNumber: null,
+    inspection: null
+  };
+  let openCategories = {};
+
+  function $(id) {
+    return document.getElementById(id);
+  }
+
+  function qs(sel, root) {
+    return (root || document).querySelector(sel);
+  }
+
+  function qsa(sel, root) {
+    return Array.from((root || document).querySelectorAll(sel));
+  }
+
+  function showScreen(name) {
+    qsa(".screen").forEach(function (el) {
+      el.classList.toggle("is-active", el.dataset.screen === name);
+    });
+    window.scrollTo(0, 0);
+  }
+
+  function setSaveIndicator(state) {
+    saveState = state;
+    const el = $("save-indicator");
+    if (!el) return;
+    el.classList.remove("is-saving", "is-saved", "is-hidden");
+    if (state === "saving") {
+      el.textContent = "שומר…";
+      el.classList.add("is-saving");
+    } else if (state === "saved") {
+      el.textContent = "נשמר";
+      el.classList.add("is-saved");
+    } else {
+      el.classList.add("is-hidden");
+    }
+  }
+
+  function scheduleSave(mutator) {
+    if (!current.roomNumber || !current.inspectionNumber) return;
+    setSaveIndicator("saving");
+    if (typeof mutator === "function") mutator();
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      persistCurrent();
+      setSaveIndicator("saved");
+      setTimeout(function () {
+        if (saveState === "saved") setSaveIndicator("idle");
+      }, 1200);
+    }, 180);
+  }
+
+  function persistCurrent() {
+    if (!current.roomNumber || !current.inspection) return;
+    Storage.saveInspection(current.roomNumber, current.inspectionNumber, {
+      roomType: current.inspection.roomType,
+      extraId: current.inspection.extraId,
+      generalNotes: current.inspection.generalNotes || "",
+      date: current.inspection.date,
+      status: current.inspection.status,
+      items: current.inspection.items
+    });
+  }
+
+  function loadCurrent(roomNumber, inspectionNumber) {
+    const insp = Storage.getInspection(roomNumber, inspectionNumber);
+    if (!insp) return false;
+    current.roomNumber = String(roomNumber);
+    current.inspectionNumber = Number(inspectionNumber);
+    current.inspection = JSON.parse(JSON.stringify(insp));
+    Storage.setLastActive(current.roomNumber, current.inspectionNumber);
+    return true;
+  }
+
+  /* ---------- Home ---------- */
+  function renderHome() {
+    showScreen("home");
+    const banner = $("continue-banner");
+    const last = Storage.getLastActive();
+    if (last && Storage.getInspection(last.roomNumber, last.inspectionNumber)) {
+      const insp = Storage.getInspection(last.roomNumber, last.inspectionNumber);
+      banner.classList.remove("is-hidden");
+      banner.innerHTML =
+        '<div class="banner-text">' +
+        "<strong>להמשיך מחדר " +
+        escapeHtml(last.roomNumber) +
+        "?</strong>" +
+        "<span>בדיקה " +
+        escapeHtml(String(last.inspectionNumber)) +
+        " · " +
+        (insp.status === "completed" ? "הושלמה" : "בתהליך") +
+        "</span></div>" +
+        '<button type="button" class="btn btn-primary" id="btn-resume-last">המשך</button>';
+      $("btn-resume-last").onclick = function () {
+        openInspection(last.roomNumber, last.inspectionNumber);
+      };
+    } else {
+      banner.classList.add("is-hidden");
+      banner.innerHTML = "";
+    }
+
+    const inProgress = Storage.getInProgressInspections();
+    const countEl = $("in-progress-count");
+    if (countEl) {
+      countEl.textContent = inProgress.length ? String(inProgress.length) : "";
+      countEl.classList.toggle("is-hidden", !inProgress.length);
+    }
+  }
+
+  function escapeHtml(str) {
+    return String(str == null ? "" : str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  /* ---------- New inspection ---------- */
+  function openNewInspectionForm() {
+    showScreen("new-inspection");
+    $("new-room-number").value = "";
+    $("new-room-type").value = "";
+    $("new-extra-id").value = "";
+    $("new-is-retest").checked = false;
+    $("new-inspection-number-label").textContent = "בדיקה 1";
+    $("new-date").value = Storage.formatDisplayDate(Storage.todayISO());
+    $("new-error").textContent = "";
+    $("new-room-number").focus();
+  }
+
+  function updateRetestLabel() {
+    const isRetest = $("new-is-retest").checked;
+    $("new-inspection-number-label").textContent = isRetest ? "בדיקה 2" : "בדיקה 1";
+  }
+
+  function startNewInspection() {
+    const roomNumber = $("new-room-number").value.trim();
+    const err = $("new-error");
+    err.textContent = "";
+    if (!roomNumber) {
+      err.textContent = "יש להזין מספר חדר לפני תחילת הבדיקה.";
+      $("new-room-number").focus();
+      return;
+    }
+
+    const isRetest = $("new-is-retest").checked;
+    const existing = Storage.getInspection(roomNumber, isRetest ? 2 : 1);
+    if (existing) {
+      err.textContent =
+        "בדיקה " +
+        (isRetest ? "2" : "1") +
+        " כבר קיימת לחדר " +
+        roomNumber +
+        ". ניתן לפתוח אותה ממסך החדרים השמורים או החיפוש.";
+      return;
+    }
+
+    try {
+      const result = Storage.startInspection(roomNumber, {
+        isRetest: isRetest,
+        roomType: $("new-room-type").value.trim(),
+        extraId: $("new-extra-id").value.trim()
+      });
+      openCategories = {};
+      openInspection(result.room.roomNumber, result.inspection.inspectionNumber);
+    } catch (e) {
+      err.textContent = e.message || "לא ניתן להתחיל בדיקה";
+    }
+  }
+
+  /* ---------- Continue ---------- */
+  function openContinueList() {
+    showScreen("continue");
+    const list = $("continue-list");
+    const items = Storage.getInProgressInspections();
+    if (!items.length) {
+      list.innerHTML =
+        '<div class="empty-state">אין בדיקות בתהליך. ניתן לפתוח בדיקת חדר חדשה.</div>';
+      return;
+    }
+    list.innerHTML = items
+      .map(function (row) {
+        return (
+          '<button type="button" class="list-card" data-room="' +
+          escapeHtml(row.roomNumber) +
+          '" data-insp="' +
+          row.inspection.inspectionNumber +
+          '">' +
+          '<div class="list-card-title">חדר ' +
+          escapeHtml(row.roomNumber) +
+          "</div>" +
+          '<div class="list-card-meta">בדיקה ' +
+          row.inspection.inspectionNumber +
+          " · " +
+          Storage.formatDisplayDate(row.inspection.date) +
+          " · ליקויים: " +
+          row.stats.defects +
+          "</div>" +
+          "</button>"
+        );
+      })
+      .join("");
+
+    qsa("[data-room]", list).forEach(function (btn) {
+      btn.onclick = function () {
+        openInspection(btn.dataset.room, btn.dataset.insp);
+      };
+    });
+  }
+
+  /* ---------- Saved rooms ---------- */
+  function openSavedRooms() {
+    showScreen("saved-rooms");
+    const list = $("saved-rooms-list");
+    const rooms = Storage.listRooms();
+    if (!rooms.length) {
+      list.innerHTML = '<div class="empty-state">עדיין לא נשמרו חדרים.</div>';
+      return;
+    }
+    list.innerHTML = rooms
+      .map(function (room) {
+        const statusLabel =
+          room.status === "completed"
+            ? "הושלמה"
+            : room.status === "in_progress"
+              ? "בתהליך"
+              : "—";
+        return (
+          '<button type="button" class="list-card" data-open-room="' +
+          escapeHtml(room.roomNumber) +
+          '">' +
+          '<div class="list-card-top">' +
+          '<div class="list-card-title">חדר ' +
+          escapeHtml(room.roomNumber) +
+          "</div>" +
+          '<span class="status-pill status-' +
+          (room.status || "none") +
+          '">' +
+          statusLabel +
+          "</span></div>" +
+          '<div class="list-card-meta">תאריך אחרון: ' +
+          Storage.formatDisplayDate(room.latestDate) +
+          " · בדיקה " +
+          (room.latestInspectionNumber || "—") +
+          " · ליקויים: " +
+          room.defects +
+          "</div>" +
+          "</button>"
+        );
+      })
+      .join("");
+
+    qsa("[data-open-room]", list).forEach(function (btn) {
+      btn.onclick = function () {
+        openRoomDetail(btn.dataset.openRoom);
+      };
+    });
+  }
+
+  function openRoomDetail(roomNumber) {
+    const room = Storage.getRoom(roomNumber);
+    if (!room) return;
+    showScreen("room-detail");
+    $("room-detail-title").textContent = "חדר " + roomNumber;
+    const list = $("room-detail-list");
+    const inspections = Object.keys(room.inspections)
+      .map(function (k) {
+        return room.inspections[k];
+      })
+      .sort(function (a, b) {
+        return a.inspectionNumber - b.inspectionNumber;
+      });
+
+    if (!inspections.length) {
+      list.innerHTML = '<div class="empty-state">אין בדיקות לחדר זה.</div>';
+      return;
+    }
+
+    list.innerHTML = inspections
+      .map(function (insp) {
+        const stats = Storage.getStats(insp);
+        const statusLabel = insp.status === "completed" ? "הושלמה" : "בתהליך";
+        return (
+          '<div class="detail-card">' +
+          '<div class="list-card-top">' +
+          "<strong>בדיקה " +
+          insp.inspectionNumber +
+          "</strong>" +
+          '<span class="status-pill status-' +
+          insp.status +
+          '">' +
+          statusLabel +
+          "</span></div>" +
+          '<div class="list-card-meta">' +
+          Storage.formatDisplayDate(insp.date) +
+          " · ליקויים: " +
+          stats.defects +
+          " · נבדקו: " +
+          stats.checked +
+          "</div>" +
+          '<div class="btn-row">' +
+          '<button type="button" class="btn btn-secondary" data-open-insp="' +
+          insp.inspectionNumber +
+          '">פתיחה</button>' +
+          '<button type="button" class="btn btn-primary" data-edit-insp="' +
+          insp.inspectionNumber +
+          '">עריכה</button>' +
+          '<button type="button" class="btn btn-secondary" data-pdf-insp="' +
+          insp.inspectionNumber +
+          '">יצירת PDF</button>' +
+          '<button type="button" class="btn btn-danger-outline" data-del-insp="' +
+          insp.inspectionNumber +
+          '">מחיקה</button>' +
+          "</div></div>"
+        );
+      })
+      .join("");
+
+    qsa("[data-open-insp]", list).forEach(function (btn) {
+      btn.onclick = function () {
+        openInspectionSummary(roomNumber, btn.dataset.openInsp);
+      };
+    });
+    qsa("[data-edit-insp]", list).forEach(function (btn) {
+      btn.onclick = function () {
+        openInspection(roomNumber, btn.dataset.editInsp);
+      };
+    });
+    qsa("[data-pdf-insp]", list).forEach(function (btn) {
+      btn.onclick = function () {
+        openPdfScreen(roomNumber, btn.dataset.pdfInsp);
+      };
+    });
+    qsa("[data-del-insp]", list).forEach(function (btn) {
+      btn.onclick = function () {
+        if (
+          confirm(
+            "למחוק את בדיקה " +
+              btn.dataset.delInsp +
+              " של חדר " +
+              roomNumber +
+              "? פעולה זו אינה ניתנת לביטול."
+          )
+        ) {
+          Storage.deleteInspection(roomNumber, btn.dataset.delInsp);
+          if (!Storage.getRoom(roomNumber)) {
+            openSavedRooms();
+          } else {
+            openRoomDetail(roomNumber);
+          }
+        }
+      };
+    });
+
+    $("btn-delete-room").onclick = function () {
+      if (
+        confirm(
+          "למחוק את כל הבדיקות של חדר " +
+            roomNumber +
+            "? פעולה זו אינה ניתנת לביטול."
+        )
+      ) {
+        Storage.deleteRoom(roomNumber);
+        openSavedRooms();
+      }
+    };
+  }
+
+  /* ---------- Search ---------- */
+  function openSearch() {
+    showScreen("search");
+    $("search-input").value = "";
+    $("search-results").innerHTML =
+      '<div class="empty-state">הזינו מספר חדר להצגה מיידית.</div>';
+    $("search-input").focus();
+  }
+
+  function runSearch() {
+    const q = $("search-input").value.trim();
+    const box = $("search-results");
+    if (!q) {
+      box.innerHTML =
+        '<div class="empty-state">הזינו מספר חדר להצגה מיידית.</div>';
+      return;
+    }
+    const room = Storage.searchRoom(q);
+    if (!room) {
+      box.innerHTML =
+        '<div class="empty-state">לא נמצא חדר מספר ' +
+        escapeHtml(q) +
+        ".</div>";
+      return;
+    }
+
+    const inspections = Object.keys(room.inspections)
+      .map(function (k) {
+        return room.inspections[k];
+      })
+      .sort(function (a, b) {
+        return a.inspectionNumber - b.inspectionNumber;
+      });
+
+    let html =
+      '<div class="search-room-head">חדר ' +
+      escapeHtml(room.roomNumber) +
+      "</div>";
+
+    inspections.forEach(function (insp) {
+      const stats = Storage.getStats(insp);
+      html +=
+        '<div class="detail-card">' +
+        "<strong>בדיקה " +
+        insp.inspectionNumber +
+        " · " +
+        (insp.status === "completed" ? "הושלמה" : "בתהליך") +
+        "</strong>" +
+        '<div class="list-card-meta">' +
+        Storage.formatDisplayDate(insp.date) +
+        " · תקינים: " +
+        stats.ok +
+        " · ליקויים: " +
+        stats.defects +
+        "</div>";
+
+      if (stats.defectList.length) {
+        html += '<ul class="defect-mini-list">';
+        stats.defectList.forEach(function (d) {
+          html +=
+            "<li><strong>" +
+            escapeHtml(d.itemName) +
+            ":</strong> " +
+            escapeHtml(d.note || "—") +
+            "</li>";
+        });
+        html += "</ul>";
+      } else {
+        html += '<div class="muted">אין ליקויים שמורים בבדיקה זו.</div>';
+      }
+
+      html +=
+        '<div class="btn-row">' +
+        '<button type="button" class="btn btn-secondary" data-s-open="' +
+        insp.inspectionNumber +
+        '">פתיחה</button>' +
+        '<button type="button" class="btn btn-primary" data-s-edit="' +
+        insp.inspectionNumber +
+        '">עריכה</button>' +
+        '<button type="button" class="btn btn-secondary" data-s-pdf="' +
+        insp.inspectionNumber +
+        '">PDF</button>' +
+        "</div></div>";
+    });
+
+    box.innerHTML = html;
+    qsa("[data-s-open]", box).forEach(function (btn) {
+      btn.onclick = function () {
+        openInspectionSummary(room.roomNumber, btn.dataset.sOpen);
+      };
+    });
+    qsa("[data-s-edit]", box).forEach(function (btn) {
+      btn.onclick = function () {
+        openInspection(room.roomNumber, btn.dataset.sEdit);
+      };
+    });
+    qsa("[data-s-pdf]", box).forEach(function (btn) {
+      btn.onclick = function () {
+        openPdfScreen(room.roomNumber, btn.dataset.sPdf);
+      };
+    });
+  }
+
+  /* ---------- Inspection form ---------- */
+  function openInspection(roomNumber, inspectionNumber) {
+    if (!loadCurrent(roomNumber, inspectionNumber)) {
+      alert("הבדיקה לא נמצאה.");
+      renderHome();
+      return;
+    }
+    showScreen("inspection");
+    renderInspectionHeader();
+    renderChecklist();
+  }
+
+  function openInspectionSummary(roomNumber, inspectionNumber) {
+    if (!loadCurrent(roomNumber, inspectionNumber)) {
+      alert("הבדיקה לא נמצאה.");
+      renderHome();
+      return;
+    }
+    // Summary view — skip defect-note blocking so completed/incomplete can be reviewed
+    showScreen("summary");
+    const stats = Storage.getStats(current.inspection);
+    $("sum-room").textContent = current.roomNumber;
+    $("sum-date").textContent = Storage.formatDisplayDate(current.inspection.date);
+    $("sum-insp").textContent = String(current.inspectionNumber);
+    $("sum-checked").textContent = String(stats.checked);
+    $("sum-ok").textContent = String(stats.ok);
+    $("sum-defects").textContent = String(stats.defects);
+
+    const list = $("sum-defect-list");
+    if (!stats.defectList.length) {
+      list.innerHTML = '<div class="empty-state">לא נמצאו ליקויים.</div>';
+    } else {
+      list.innerHTML = stats.defectList
+        .map(function (d) {
+          return (
+            "<li><strong>" +
+            escapeHtml(d.itemName) +
+            "</strong> <span class=\"muted\">(" +
+            escapeHtml(d.categoryName) +
+            ")</span><div>" +
+            escapeHtml(d.note) +
+            "</div></li>"
+          );
+        })
+        .join("");
+    }
+
+    const generalNotes = (current.inspection.generalNotes || "").trim();
+    const notesBox = $("sum-general-notes");
+    if (notesBox) {
+      notesBox.textContent = generalNotes || "אין הערות כלליות.";
+      notesBox.classList.toggle("is-empty", !generalNotes);
+    }
+  }
+
+  function renderInspectionHeader() {
+    const insp = current.inspection;
+    $("insp-room-label").textContent = "חדר " + current.roomNumber;
+    $("insp-meta-label").textContent =
+      "בדיקה " +
+      current.inspectionNumber +
+      " · " +
+      Storage.formatDisplayDate(insp.date);
+    $("insp-room-type").value = insp.roomType || "";
+    $("insp-extra-id").value = insp.extraId || "";
+    const notesEl = $("insp-general-notes");
+    if (notesEl) {
+      notesEl.value = insp.generalNotes || "";
+      autoGrow(notesEl);
+    }
+  }
+
+  function renderChecklist() {
+    const root = $("checklist-root");
+    const insp = current.inspection;
+    let html = "";
+
+    CHECKLIST.forEach(function (cat, catIndex) {
+      // Default: first category open; remember user toggles afterwards
+      const opened =
+        openCategories[cat.id] === undefined ? catIndex === 0 : !!openCategories[cat.id];
+
+      let done = 0;
+      let total = 0;
+      let defects = 0;
+      cat.items.forEach(function (item) {
+        const key = itemKey(cat.id, item.id);
+        const row = insp.items[key];
+        if (item.optionalExists && row && row.exists === false) return;
+        if (item.optionalExists && (!row || row.exists !== true)) {
+          total++;
+          return;
+        }
+        total++;
+        if (row && row.status) {
+          done++;
+          if (row.status === "not_ok") defects++;
+        }
+      });
+
+      html +=
+        '<section class="category-card' +
+        (opened ? " is-open" : "") +
+        '" data-cat="' +
+        cat.id +
+        '">' +
+        '<button type="button" class="category-head" data-toggle-cat="' +
+        cat.id +
+        '" aria-expanded="' +
+        (opened ? "true" : "false") +
+        '">' +
+        "<div><span class=\"category-name\">" +
+        escapeHtml(cat.name) +
+        '</span><span class="category-progress">' +
+        done +
+        "/" +
+        total +
+        (defects ? " · " + defects + " ליקויים" : "") +
+        "</span></div>" +
+        '<span class="chevron" aria-hidden="true"></span>' +
+        "</button>" +
+        '<div class="category-body"' +
+        (opened ? "" : " hidden") +
+        ">";
+
+      cat.items.forEach(function (item) {
+        html += renderItemRow(cat, item);
+      });
+
+      html += "</div></section>";
+    });
+
+    root.innerHTML = html;
+    bindChecklistEvents(root);
+  }
+
+  function renderItemRow(cat, item) {
+    const key = itemKey(cat.id, item.id);
+    const row = current.inspection.items[key] || {
+      exists: item.optionalExists ? null : true,
+      status: null,
+      note: ""
+    };
+
+    let body = "";
+    if (item.optionalExists) {
+      body +=
+        '<div class="exists-block">' +
+        '<div class="exists-label">האם הפריט קיים בחדר?</div>' +
+        '<div class="btn-pair">' +
+        '<button type="button" class="btn-choice' +
+        (row.exists === true ? " is-active is-ok" : "") +
+        '" data-exists="true" data-key="' +
+        key +
+        '">קיים</button>' +
+        '<button type="button" class="btn-choice' +
+        (row.exists === false ? " is-active is-missing" : "") +
+        '" data-exists="false" data-key="' +
+        key +
+        '">לא קיים</button>' +
+        "</div></div>";
+    }
+
+    const showStatus =
+      !item.optionalExists || row.exists === true;
+
+    if (showStatus) {
+      const isDefect = row.status === "not_ok";
+      const noteRequired = isDefect && !(row.note && row.note.trim());
+      body +=
+        '<div class="status-block">' +
+        '<div class="btn-pair">' +
+        '<button type="button" class="btn-choice' +
+        (row.status === "ok" ? " is-active is-ok" : "") +
+        '" data-status="ok" data-key="' +
+        key +
+        '">תקין</button>' +
+        '<button type="button" class="btn-choice' +
+        (row.status === "not_ok" ? " is-active is-bad" : "") +
+        '" data-status="not_ok" data-key="' +
+        key +
+        '">לא תקין</button>' +
+        "</div>" +
+        '<label class="note-label" for="note-' +
+        key +
+        '">' +
+        (isDefect ? "הסבר הליקוי (חובה)" : "הערה (אופציונלי)") +
+        "</label>" +
+        '<textarea id="note-' +
+        key +
+        '" class="note-field' +
+        (noteRequired ? " is-required" : "") +
+        '" data-note="' +
+        key +
+        '" rows="2" placeholder="' +
+        (isDefect ? "תארו את הליקוי…" : "הערה במידת הצורך…") +
+        '">' +
+        escapeHtml(row.note || "") +
+        "</textarea>" +
+        "</div>";
+    } else if (item.optionalExists && row.exists === false) {
+      body += '<div class="missing-hint">לא קיים בחדר — אין צורך בסימון תקין/לא תקין</div>';
+    }
+
+    return (
+      '<article class="item-row' +
+      (row.status === "not_ok" ? " is-defect" : "") +
+      (row.exists === false ? " is-absent" : "") +
+      '" data-item-key="' +
+      key +
+      '">' +
+      '<h3 class="item-name">' +
+      escapeHtml(item.name) +
+      "</h3>" +
+      body +
+      "</article>"
+    );
+  }
+
+  function bindChecklistEvents(root) {
+    qsa("[data-toggle-cat]", root).forEach(function (btn) {
+      btn.onclick = function () {
+        const id = btn.dataset.toggleCat;
+        const card = btn.closest(".category-card");
+        const body = card.querySelector(".category-body");
+        const willOpen = body.hasAttribute("hidden");
+        openCategories[id] = willOpen;
+        body.hidden = !willOpen;
+        card.classList.toggle("is-open", willOpen);
+        btn.setAttribute("aria-expanded", willOpen ? "true" : "false");
+      };
+    });
+
+    qsa("[data-exists]", root).forEach(function (btn) {
+      btn.onclick = function () {
+        const key = btn.dataset.key;
+        const exists = btn.dataset.exists === "true";
+        scheduleSave(function () {
+          const row = current.inspection.items[key];
+          row.exists = exists;
+          if (!exists) {
+            row.status = null;
+            row.note = "";
+          }
+        });
+        // Re-render only this item's category for responsiveness
+        renderChecklist();
+      };
+    });
+
+    qsa("[data-status]", root).forEach(function (btn) {
+      btn.onclick = function () {
+        const key = btn.dataset.key;
+        const status = btn.dataset.status;
+        scheduleSave(function () {
+          const row = current.inspection.items[key];
+          // Exclusive: ok XOR not_ok — tapping same clears? Spec: cannot mark both. Keep selection.
+          row.status = status;
+        });
+        renderChecklist();
+        if (status === "not_ok") {
+          const ta = document.getElementById("note-" + key);
+          if (ta) {
+            ta.focus();
+          }
+        }
+      };
+    });
+
+    qsa("[data-note]", root).forEach(function (ta) {
+      ta.addEventListener("input", function () {
+        const key = ta.dataset.note;
+        autoGrow(ta);
+        scheduleSave(function () {
+          current.inspection.items[key].note = ta.value;
+        });
+        ta.classList.toggle(
+          "is-required",
+          current.inspection.items[key].status === "not_ok" && !ta.value.trim()
+        );
+      });
+      autoGrow(ta);
+    });
+  }
+
+  function autoGrow(el) {
+    el.style.height = "auto";
+    el.style.height = Math.max(el.scrollHeight, 48) + "px";
+  }
+
+  /* ---------- Summary ---------- */
+  function openSummary() {
+    const missing = Storage.getMissingDefectNotes(current.inspection);
+    if (missing.length) {
+      alert(
+        "לא ניתן לסיים — יש " +
+          missing.length +
+          " ליקויים ללא הסבר.\nהראשון: " +
+          missing[0].itemName +
+          " (" +
+          missing[0].categoryName +
+          ")"
+      );
+      // Open category of first missing
+      const meta = findItemMeta(missing[0].key);
+      if (meta) {
+        openCategories[meta.category.id] = true;
+        renderChecklist();
+        const el = document.querySelector(
+          '[data-item-key="' + missing[0].key + '"]'
+        );
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      return;
+    }
+
+    persistCurrent();
+    showScreen("summary");
+    const stats = Storage.getStats(current.inspection);
+    $("sum-room").textContent = current.roomNumber;
+    $("sum-date").textContent = Storage.formatDisplayDate(current.inspection.date);
+    $("sum-insp").textContent = String(current.inspectionNumber);
+    $("sum-checked").textContent = String(stats.checked);
+    $("sum-ok").textContent = String(stats.ok);
+    $("sum-defects").textContent = String(stats.defects);
+
+    const list = $("sum-defect-list");
+    if (!stats.defectList.length) {
+      list.innerHTML = '<div class="empty-state">לא נמצאו ליקויים.</div>';
+    } else {
+      list.innerHTML = stats.defectList
+        .map(function (d) {
+          return (
+            "<li><strong>" +
+            escapeHtml(d.itemName) +
+            "</strong> <span class=\"muted\">(" +
+            escapeHtml(d.categoryName) +
+            ")</span><div>" +
+            escapeHtml(d.note) +
+            "</div></li>"
+          );
+        })
+        .join("");
+    }
+
+    const generalNotes = (current.inspection.generalNotes || "").trim();
+    const notesBox = $("sum-general-notes");
+    if (notesBox) {
+      notesBox.textContent = generalNotes || "אין הערות כלליות.";
+      notesBox.classList.toggle("is-empty", !generalNotes);
+    }
+  }
+
+  function finishAndSave() {
+    const missing = Storage.getMissingDefectNotes(current.inspection);
+    if (missing.length) {
+      alert("יש ליקויים ללא הסבר. יש להשלים לפני סיום.");
+      return;
+    }
+    current.inspection.status = "completed";
+    Storage.completeInspection(current.roomNumber, current.inspectionNumber);
+    setSaveIndicator("saved");
+    alert("הבדיקה נשמרה בהצלחה.");
+    renderHome();
+  }
+
+  /* ---------- PDF screen ---------- */
+  let pdfContext = null;
+
+  function openPdfPicker() {
+    showScreen("pdf-picker");
+    const list = $("pdf-picker-list");
+    const rooms = Storage.listRooms();
+    if (!rooms.length) {
+      list.innerHTML = '<div class="empty-state">אין בדיקות שמורות ליצירת PDF.</div>';
+      return;
+    }
+    let html = "";
+    rooms.forEach(function (room) {
+      room.inspections.forEach(function (insp) {
+        html +=
+          '<button type="button" class="list-card" data-pdf-room="' +
+          escapeHtml(room.roomNumber) +
+          '" data-pdf-n="' +
+          insp.inspectionNumber +
+          '">' +
+          '<div class="list-card-title">חדר ' +
+          escapeHtml(room.roomNumber) +
+          " · בדיקה " +
+          insp.inspectionNumber +
+          "</div>" +
+          '<div class="list-card-meta">' +
+          Storage.formatDisplayDate(insp.date) +
+          " · " +
+          (insp.status === "completed" ? "הושלמה" : "בתהליך") +
+          "</div></button>";
+      });
+    });
+    list.innerHTML = html;
+    qsa("[data-pdf-room]", list).forEach(function (btn) {
+      btn.onclick = function () {
+        openPdfScreen(btn.dataset.pdfRoom, btn.dataset.pdfN);
+      };
+    });
+  }
+
+  function openPdfScreen(roomNumber, inspectionNumber) {
+    const insp = Storage.getInspection(roomNumber, inspectionNumber);
+    if (!insp) {
+      alert("הבדיקה לא נמצאה.");
+      return;
+    }
+    pdfContext = {
+      roomNumber: String(roomNumber),
+      inspectionNumber: Number(inspectionNumber),
+      inspection: insp
+    };
+    showScreen("pdf");
+    $("pdf-status").textContent = "";
+    PdfService.renderPreview($("pdf-preview"), pdfContext.roomNumber, pdfContext.inspection);
+    $("pdf-filename").textContent = PdfService.pdfFileName(
+      pdfContext.roomNumber,
+      pdfContext.inspectionNumber,
+      Storage.todayISO()
+    );
+  }
+
+  async function withPdfBusy(fn) {
+    const status = $("pdf-status");
+    status.textContent = "מעבד…";
+    qsa("#screen-pdf .btn").forEach(function (b) {
+      b.disabled = true;
+    });
+    try {
+      await fn();
+      status.textContent = "מוכן";
+    } catch (e) {
+      console.error(e);
+      status.textContent = e.message || "שגיאה ביצירת PDF";
+      alert(status.textContent);
+    } finally {
+      qsa("#screen-pdf .btn").forEach(function (b) {
+        b.disabled = false;
+      });
+    }
+  }
+
+  /* ---------- About ---------- */
+  function openAbout() {
+    showScreen("about");
+  }
+
+  /* ---------- Wire up ---------- */
+  function bindGlobal() {
+    $("btn-home-logo").onclick = function () {
+      persistCurrent();
+      renderHome();
+    };
+
+    $("nav-new").onclick = openNewInspectionForm;
+    $("nav-continue").onclick = openContinueList;
+    $("nav-saved").onclick = openSavedRooms;
+    $("nav-search").onclick = openSearch;
+    $("nav-pdf").onclick = openPdfPicker;
+    $("nav-about").onclick = openAbout;
+
+    qsa("[data-back]").forEach(function (btn) {
+      btn.onclick = function () {
+        persistCurrent();
+        const target = btn.dataset.back;
+        if (target === "home") renderHome();
+        else if (target === "saved") openSavedRooms();
+        else if (target === "inspection") {
+          showScreen("inspection");
+          renderChecklist();
+        } else showScreen(target);
+      };
+    });
+
+    $("new-is-retest").addEventListener("change", updateRetestLabel);
+    $("btn-start-inspection").onclick = startNewInspection;
+
+    $("insp-room-type").addEventListener("input", function () {
+      scheduleSave(function () {
+        current.inspection.roomType = $("insp-room-type").value;
+      });
+    });
+    $("insp-extra-id").addEventListener("input", function () {
+      scheduleSave(function () {
+        current.inspection.extraId = $("insp-extra-id").value;
+      });
+    });
+    $("insp-general-notes").addEventListener("input", function () {
+      const el = $("insp-general-notes");
+      autoGrow(el);
+      scheduleSave(function () {
+        current.inspection.generalNotes = el.value;
+      });
+    });
+
+    $("btn-to-summary").onclick = openSummary;
+    $("btn-summary-edit").onclick = function () {
+      showScreen("inspection");
+      renderChecklist();
+    };
+    $("btn-summary-finish").onclick = finishAndSave;
+    $("btn-summary-pdf").onclick = function () {
+      persistCurrent();
+      openPdfScreen(current.roomNumber, current.inspectionNumber);
+    };
+
+    $("search-input").addEventListener("input", runSearch);
+
+    $("btn-pdf-download").onclick = function () {
+      if (!pdfContext) return;
+      withPdfBusy(function () {
+        return PdfService.download(pdfContext.roomNumber, pdfContext.inspection);
+      });
+    };
+    $("btn-pdf-print").onclick = function () {
+      if (!pdfContext) return;
+      withPdfBusy(function () {
+        return PdfService.print(pdfContext.roomNumber, pdfContext.inspection);
+      });
+    };
+    $("btn-pdf-share").onclick = function () {
+      if (!pdfContext) return;
+      withPdfBusy(function () {
+        return PdfService.share(pdfContext.roomNumber, pdfContext.inspection);
+      });
+    };
+
+    // Persist on hide / unload
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "hidden") persistCurrent();
+    });
+    window.addEventListener("pagehide", persistCurrent);
+    window.addEventListener("beforeunload", persistCurrent);
+  }
+
+  function init() {
+    $("app-title").textContent = APP_META.name;
+    $("footer-copy").textContent = APP_META.copyright;
+    bindGlobal();
+    renderHome();
+  }
+
+  document.addEventListener("DOMContentLoaded", init);
+})();

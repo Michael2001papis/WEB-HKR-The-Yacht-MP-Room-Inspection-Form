@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b3a4a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>בדיקת חדרים — The Yacht</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <button type="button" class="brand" id="btn-home-logo" aria-label="מסך הבית">
+        <img src="assets/logo.svg" alt="" class="brand-logo" width="44" height="44">
+        <div class="brand-text">
+          <span class="brand-name" id="app-title">בדיקת חדרים — The Yacht</span>
+          <span class="brand-tag">טופס בדיקת חדר דיגיטלי</span>
+        </div>
+      </button>
+      <div id="save-indicator" class="save-indicator is-hidden" aria-live="polite"></div>
+    </header>
+
+    <main class="app-main">
+      <!-- HOME -->
+      <section class="screen is-active" data-screen="home" id="screen-home">
+        <div id="continue-banner" class="continue-banner is-hidden"></div>
+        <h1 class="screen-title">מסך הבית</h1>
+        <div class="home-grid">
+          <button type="button" class="home-tile" id="nav-new">
+            <span class="tile-icon" aria-hidden="true">＋</span>
+            <span class="tile-title">בדיקת חדר חדשה</span>
+            <span class="tile-desc">פתיחת טופס בדיקה חדש</span>
+          </button>
+          <button type="button" class="home-tile" id="nav-continue">
+            <span class="tile-icon" aria-hidden="true">↻</span>
+            <span class="tile-title">המשך בדיקה קיימת</span>
+            <span class="tile-desc">חזרה לבדיקה שטרם הסתיימה</span>
+            <span id="in-progress-count" class="tile-badge is-hidden"></span>
+          </button>
+          <button type="button" class="home-tile" id="nav-saved">
+            <span class="tile-icon" aria-hidden="true">☰</span>
+            <span class="tile-title">חדרים שמורים</span>
+            <span class="tile-desc">כל החדרים שנשמרו באפליקציה</span>
+          </button>
+          <button type="button" class="home-tile" id="nav-search">
+            <span class="tile-icon" aria-hidden="true">⌕</span>
+            <span class="tile-title">חיפוש חדר</span>
+            <span class="tile-desc">חיפוש מיידי לפי מספר חדר</span>
+          </button>
+          <button type="button" class="home-tile" id="nav-pdf">
+            <span class="tile-icon" aria-hidden="true">▤</span>
+            <span class="tile-title">יצירת PDF</span>
+            <span class="tile-desc">יצירת קובץ מתוך בדיקה שמורה</span>
+          </button>
+          <button type="button" class="home-tile home-tile-muted" id="nav-about">
+            <span class="tile-icon" aria-hidden="true">ⓘ</span>
+            <span class="tile-title">אודות האפליקציה</span>
+            <span class="tile-desc">מידע קצר על המערכת</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- NEW INSPECTION -->
+      <section class="screen" data-screen="new-inspection" id="screen-new">
+        <button type="button" class="back-link" data-back="home">→ חזרה</button>
+        <h1 class="screen-title">בדיקת חדר חדשה</h1>
+        <form class="form-card" id="form-new" onsubmit="return false;">
+          <label class="field">
+            <span>מספר חדר <em class="req">*</em></span>
+            <input type="text" id="new-room-number" inputmode="numeric" autocomplete="off" required placeholder="לדוגמה: 102">
+          </label>
+          <label class="field">
+            <span>סוג חדר</span>
+            <input type="text" id="new-room-type" autocomplete="off" placeholder="אופציונלי">
+          </label>
+          <label class="field">
+            <span>מספר חדר נוסף / מזהה</span>
+            <input type="text" id="new-extra-id" autocomplete="off" placeholder="אופציונלי">
+          </label>
+          <label class="field">
+            <span>תאריך הבדיקה</span>
+            <input type="text" id="new-date" readonly>
+          </label>
+          <div class="field">
+            <span>מספר הבדיקה</span>
+            <div class="inspection-num-row">
+              <strong id="new-inspection-number-label">בדיקה 1</strong>
+              <label class="check-inline">
+                <input type="checkbox" id="new-is-retest">
+                <span>בדיקה חוזרת (בדיקה 2)</span>
+              </label>
+            </div>
+            <p class="field-hint">ברירת המחדל היא תמיד בדיקה 1. בדיקה 2 רק בסימון מפורש.</p>
+          </div>
+          <p class="form-error" id="new-error" role="alert"></p>
+          <button type="button" class="btn btn-primary btn-block" id="btn-start-inspection">התחלת בדיקה</button>
+        </form>
+      </section>
+
+      <!-- CONTINUE -->
+      <section class="screen" data-screen="continue" id="screen-continue">
+        <button type="button" class="back-link" data-back="home">→ חזרה</button>
+        <h1 class="screen-title">המשך בדיקה קיימת</h1>
+        <div id="continue-list" class="stack"></div>
+      </section>
+
+      <!-- SAVED ROOMS -->
+      <section class="screen" data-screen="saved-rooms" id="screen-saved">
+        <button type="button" class="back-link" data-back="home">→ חזרה</button>
+        <h1 class="screen-title">חדרים שמורים</h1>
+        <div id="saved-rooms-list" class="stack"></div>
+      </section>
+
+      <!-- ROOM DETAIL -->
+      <section class="screen" data-screen="room-detail" id="screen-room-detail">
+        <button type="button" class="back-link" data-back="saved">→ חזרה לחדרים</button>
+        <h1 class="screen-title" id="room-detail-title">חדר</h1>
+        <div id="room-detail-list" class="stack"></div>
+        <button type="button" class="btn btn-danger-outline btn-block" id="btn-delete-room">מחיקת כל החדר</button>
+      </section>
+
+      <!-- SEARCH -->
+      <section class="screen" data-screen="search" id="screen-search">
+        <button type="button" class="back-link" data-back="home">→ חזרה</button>
+        <h1 class="screen-title">חיפוש חדר</h1>
+        <label class="field">
+          <span>מספר חדר</span>
+          <input type="search" id="search-input" inputmode="numeric" placeholder="הקלידו מספר חדר…" autocomplete="off">
+        </label>
+        <div id="search-results" class="stack"></div>
+      </section>
+
+      <!-- INSPECTION -->
+      <section class="screen" data-screen="inspection" id="screen-inspection">
+        <button type="button" class="back-link" data-back="home">→ מסך הבית</button>
+        <div class="insp-header">
+          <h1 class="screen-title" id="insp-room-label">חדר</h1>
+          <p class="insp-meta" id="insp-meta-label"></p>
+        </div>
+        <div class="form-card insp-meta-fields">
+          <label class="field">
+            <span>סוג חדר</span>
+            <input type="text" id="insp-room-type" autocomplete="off">
+          </label>
+          <label class="field">
+            <span>מספר חדר נוסף / מזהה</span>
+            <input type="text" id="insp-extra-id" autocomplete="off">
+          </label>
+        </div>
+        <div id="checklist-root" class="checklist"></div>
+        <div class="general-notes-card">
+          <h2 class="general-notes-title">הערות כלליות</h2>
+          <p class="general-notes-hint">הערות שלא שייכות לסעיף מסוים — יישמרו בסוף הבדיקה וב־PDF.</p>
+          <textarea id="insp-general-notes" class="note-field general-notes-field" rows="4" placeholder="כתבו כאן הערות חופשיות…"></textarea>
+        </div>
+        <div class="sticky-actions">
+          <button type="button" class="btn btn-primary btn-block" id="btn-to-summary">מעבר לסיכום</button>
+        </div>
+      </section>
+
+      <!-- SUMMARY -->
+      <section class="screen" data-screen="summary" id="screen-summary">
+        <button type="button" class="back-link" data-back="inspection">→ חזרה לעריכה</button>
+        <h1 class="screen-title">סיכום החדר</h1>
+        <div class="summary-card">
+          <div class="summary-grid">
+            <div><span class="muted">מספר חדר</span><strong id="sum-room"></strong></div>
+            <div><span class="muted">תאריך</span><strong id="sum-date"></strong></div>
+            <div><span class="muted">מספר בדיקה</span><strong id="sum-insp"></strong></div>
+            <div><span class="muted">נבדקו</span><strong id="sum-checked"></strong></div>
+            <div><span class="muted">תקינים</span><strong id="sum-ok"></strong></div>
+            <div><span class="muted">ליקויים</span><strong id="sum-defects"></strong></div>
+          </div>
+          <h2 class="section-subtitle">רשימת ליקויים</h2>
+          <ul id="sum-defect-list" class="defect-list"></ul>
+          <h2 class="section-subtitle">הערות כלליות</h2>
+          <div id="sum-general-notes" class="sum-general-notes"></div>
+        </div>
+        <div class="btn-stack">
+          <button type="button" class="btn btn-secondary btn-block" id="btn-summary-edit">חזרה לעריכה</button>
+          <button type="button" class="btn btn-primary btn-block" id="btn-summary-finish">סיום ושמירה</button>
+          <button type="button" class="btn btn-secondary btn-block" id="btn-summary-pdf">יצירת PDF</button>
+        </div>
+      </section>
+
+      <!-- PDF PICKER -->
+      <section class="screen" data-screen="pdf-picker" id="screen-pdf-picker">
+        <button type="button" class="back-link" data-back="home">→ חזרה</button>
+        <h1 class="screen-title">בחירת בדיקה ל־PDF</h1>
+        <div id="pdf-picker-list" class="stack"></div>
+      </section>
+
+      <!-- PDF -->
+      <section class="screen" data-screen="pdf" id="screen-pdf">
+        <button type="button" class="back-link" data-back="home">→ מסך הבית</button>
+        <h1 class="screen-title">יצירת PDF</h1>
+        <p class="filename-line">שם הקובץ: <strong id="pdf-filename"></strong></p>
+        <p class="pdf-status" id="pdf-status" aria-live="polite"></p>
+        <div class="btn-row pdf-actions">
+          <button type="button" class="btn btn-primary" id="btn-pdf-download">הורדת PDF</button>
+          <button type="button" class="btn btn-secondary" id="btn-pdf-print">הדפסת PDF</button>
+          <button type="button" class="btn btn-secondary" id="btn-pdf-share">שיתוף PDF</button>
+        </div>
+        <h2 class="section-subtitle">תצוגה מקדימה</h2>
+        <div id="pdf-preview" class="pdf-preview-wrap"></div>
+      </section>
+
+      <!-- ABOUT -->
+      <section class="screen" data-screen="about" id="screen-about">
+        <button type="button" class="back-link" data-back="home">→ חזרה</button>
+        <h1 class="screen-title">אודות האפליקציה</h1>
+        <div class="about-card">
+          <p>
+            האפליקציה נועדה להחליף את טופסי הנייר המצולמים בבדיקות חדרים בבית המלון.
+          </p>
+          <p>
+            באמצעותה ניתן לשמור את בדיקות החדרים בצורה דיגיטלית, לחסוך זמן בעבודה היומיומית,
+            ולצמצם שימוש מיותר בנייר.
+          </p>
+          <p>
+            כל שינוי נשמר אוטומטית במכשיר, וניתן ליצור קובץ PDF מסודר לשליחה או להדפסה.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <span id="footer-copy">© כל הזכויות שמורות</span>
+    </footer>
+  </div>
+
+  <div id="pdf-worker" aria-hidden="true"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="js/checklist-data.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/pdf.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
