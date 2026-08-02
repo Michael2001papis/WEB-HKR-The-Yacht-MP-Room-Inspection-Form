@@ -328,6 +328,237 @@
       // Fallback: download
       await this.download(roomNumber, inspection);
       return { method: "download", filename: result.filename };
+    },
+
+    /**
+     * Full read-only backup PDF of ALL rooms and inspections.
+     * Does not mutate Storage / local data.
+     */
+    async downloadFullBackup() {
+      if (typeof html2pdf === "undefined") {
+        throw new Error("ספריית PDF לא נטענה");
+      }
+
+      const store = global.Storage.getAll();
+      const roomNums = Object.keys(store.rooms || {}).sort(function (a, b) {
+        const na = Number(a);
+        const nb = Number(b);
+        if (!isNaN(na) && !isNaN(nb) && String(na) === a && String(nb) === b) {
+          return na - nb;
+        }
+        return String(a).localeCompare(String(b), "he");
+      });
+
+      if (!roomNums.length) {
+        throw new Error("אין חדרים שמורים ליצירת גיבוי");
+      }
+
+      let inspectionCount = 0;
+      const sections = [];
+      roomNums.forEach(function (roomNumber) {
+        const room = store.rooms[roomNumber];
+        const inspKeys = Object.keys(room.inspections || {}).sort(function (a, b) {
+          return Number(a) - Number(b);
+        });
+        inspKeys.forEach(function (k) {
+          const insp = room.inspections[k];
+          if (!insp) return;
+          inspectionCount++;
+          sections.push({ roomNumber: roomNumber, inspection: insp });
+        });
+      });
+
+      if (!inspectionCount) {
+        throw new Error("אין בדיקות שמורות ליצירת גיבוי");
+      }
+
+      const now = new Date();
+      const stamp =
+        String(now.getDate()).padStart(2, "0") +
+        "-" +
+        String(now.getMonth() + 1).padStart(2, "0") +
+        "-" +
+        now.getFullYear() +
+        "-" +
+        String(now.getHours()).padStart(2, "0") +
+        "-" +
+        String(now.getMinutes()).padStart(2, "0");
+      const filename = "WEB-HKR-Full-Rooms-Backup-" + stamp + ".pdf";
+      const createdLabel =
+        String(now.getDate()).padStart(2, "0") +
+        "/" +
+        String(now.getMonth() + 1).padStart(2, "0") +
+        "/" +
+        now.getFullYear() +
+        " " +
+        String(now.getHours()).padStart(2, "0") +
+        ":" +
+        String(now.getMinutes()).padStart(2, "0");
+
+      function formatDt(iso) {
+        if (!iso) return "—";
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return String(iso);
+        return (
+          String(d.getDate()).padStart(2, "0") +
+          "/" +
+          String(d.getMonth() + 1).padStart(2, "0") +
+          "/" +
+          d.getFullYear() +
+          " " +
+          String(d.getHours()).padStart(2, "0") +
+          ":" +
+          String(d.getMinutes()).padStart(2, "0")
+        );
+      }
+
+      function statusHe(st) {
+        return st === "completed" ? "הושלמה" : "בתהליך";
+      }
+
+      let html =
+        '<div class="pdf-full-backup" dir="rtl">' +
+        '<div class="pdf-root pdf-backup-cover">' +
+        '<div class="pdf-title">גיבוי מלא — כל החדרים והבדיקות</div>' +
+        '<div class="pdf-subtitle">' +
+        escapeHtml(global.APP_META.name) +
+        "</div>" +
+        '<div class="pdf-meta" style="text-align:right;margin-top:16px;">' +
+        "<div>תאריך ושעת יצירת הגיבוי: " +
+        escapeHtml(createdLabel) +
+        "</div>" +
+        "<div>מספר חדרים: " +
+        roomNums.length +
+        "</div>" +
+        "<div>מספר בדיקות: " +
+        inspectionCount +
+        "</div>" +
+        "<div>הגיבוי כולל את כל החדרים ללא דילוג, כולל בדיקות בתהליך וחדרים ללא ליקויים.</div>" +
+        "</div></div>";
+
+      sections.forEach(function (sec, idx) {
+        const roomNumber = sec.roomNumber;
+        const inspection = sec.inspection;
+        const stats = global.Storage.getStats(inspection);
+        const metaLines = [
+          "מספר חדר: " + roomNumber,
+          "מספר בדיקה: " + inspection.inspectionNumber,
+          "מצב הבדיקה: " + statusHe(inspection.status),
+          "תאריך הבדיקה: " +
+            global.Storage.formatDisplayDate(inspection.date),
+          "תאריך יצירת הבדיקה: " + formatDt(inspection.createdAt),
+          "עדכון אחרון: " + formatDt(inspection.updatedAt)
+        ];
+        if (inspection.roomType) {
+          metaLines.push("סוג חדר: " + inspection.roomType);
+        }
+        if (inspection.extraId) {
+          metaLines.push("מזהה נוסף: " + inspection.extraId);
+        }
+
+        html +=
+          '<div class="pdf-root pdf-backup-section" data-room="' +
+          escapeHtml(String(roomNumber)) +
+          '">' +
+          '<div class="pdf-header">' +
+          '<div class="pdf-brand">' +
+          '<img class="pdf-logo" src="static/IMG/LOGO.png" alt="">' +
+          "<div>" +
+          '<div class="pdf-title">חדר ' +
+          escapeHtml(String(roomNumber)) +
+          " — בדיקה " +
+          escapeHtml(String(inspection.inspectionNumber)) +
+          "</div>" +
+          '<div class="pdf-subtitle">' +
+          escapeHtml(global.APP_META.formName) +
+          " · גיבוי מלא</div>" +
+          "</div></div>" +
+          '<div class="pdf-meta">' +
+          metaLines
+            .map(function (line) {
+              return "<div>" + escapeHtml(line) + "</div>";
+            })
+            .join("") +
+          "</div></div>" +
+          '<div class="pdf-summary">' +
+          "<div>פריטים שנבדקו: " +
+          stats.checked +
+          "</div>" +
+          "<div>תקינים: " +
+          stats.ok +
+          "</div>" +
+          "<div>ליקויים: " +
+          stats.defects +
+          "</div></div>" +
+          '<table class="pdf-table"><thead><tr>' +
+          "<th>נושא לבדיקה</th><th>תקין</th><th>לא תקין</th><th>הערות</th>" +
+          "</tr></thead><tbody>" +
+          buildRowsHtml(inspection) +
+          "</tbody></table>" +
+          (inspection.generalNotes && String(inspection.generalNotes).trim()
+            ? '<div class="pdf-general-notes"><h3>הערות כלליות</h3><div>' +
+              escapeHtml(inspection.generalNotes).replace(/\n/g, "<br>") +
+              "</div></div>"
+            : "") +
+          '<div class="pdf-footer-note">' +
+          '<div class="pdf-room-repeat">חדר ' +
+          escapeHtml(String(roomNumber)) +
+          " · בדיקה " +
+          escapeHtml(String(inspection.inspectionNumber)) +
+          " · " +
+          statusHe(inspection.status) +
+          "</div>" +
+          "<div>" +
+          escapeHtml(COPYRIGHT()) +
+          "</div></div></div>";
+        void idx;
+      });
+
+      html += "</div>";
+
+      const worker = ensureWorker();
+      worker.innerHTML = html;
+      await waitForImages(worker);
+
+      const opt = getHtml2PdfOptions(filename);
+      opt.pagebreak = {
+        mode: ["css", "legacy"],
+        before: ".pdf-backup-section",
+        avoid: [".pdf-row", "tr", ".pdf-backup-cover"]
+      };
+
+      const workerEl = worker.querySelector(".pdf-full-backup");
+      const pdf = await html2pdf().set(opt).from(workerEl).toPdf().get("pdf");
+
+      const total = pdf.internal.getNumberOfPages();
+      for (let i = 1; i <= total; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(8);
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+        pdf.text(i + " / " + total, pageW / 2, pageH - 6, { align: "center" });
+        pdf.text("Full backup", 8, pageH - 6);
+      }
+
+      const blob = pdf.output("blob");
+      worker.innerHTML = "";
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () {
+        URL.revokeObjectURL(url);
+      }, 2000);
+
+      return {
+        filename: filename,
+        rooms: roomNums.length,
+        inspections: inspectionCount
+      };
     }
   };
 

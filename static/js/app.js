@@ -8,8 +8,7 @@
   let current = {
     roomNumber: null,
     inspectionNumber: null,
-    inspection: null,
-    conflictId: null
+    inspection: null
   };
   let openCategories = {};
 
@@ -64,14 +63,6 @@
 
   function persistCurrent() {
     if (!current.roomNumber || !current.inspection) return;
-    if (current.conflictId) {
-      Storage.saveConflictInspection(
-        current.roomNumber,
-        current.conflictId,
-        current.inspection
-      );
-      return;
-    }
     Storage.saveInspection(current.roomNumber, current.inspectionNumber, {
       roomType: current.inspection.roomType,
       extraId: current.inspection.extraId,
@@ -88,20 +79,7 @@
     current.roomNumber = String(roomNumber);
     current.inspectionNumber = Number(inspectionNumber);
     current.inspection = JSON.parse(JSON.stringify(insp));
-    current.conflictId = null;
     Storage.setLastActive(current.roomNumber, current.inspectionNumber);
-    return true;
-  }
-
-  function loadConflictCurrent(roomNumber, conflictId) {
-    const copy = Storage.getConflictCopy(roomNumber, conflictId);
-    if (!copy || !copy.inspection) return false;
-    current.roomNumber = String(roomNumber);
-    current.inspectionNumber = Number(
-      copy.inspection.inspectionNumber || copy.originalInspectionNumber || 0
-    );
-    current.inspection = JSON.parse(JSON.stringify(copy.inspection));
-    current.conflictId = conflictId;
     return true;
   }
 
@@ -304,7 +282,7 @@
         return a.inspectionNumber - b.inspectionNumber;
       });
 
-    if (!inspections.length && !(room.conflictCopies && room.conflictCopies.length)) {
+    if (!inspections.length) {
       list.innerHTML = '<div class="empty-state">אין בדיקות לחדר זה.</div>';
       return;
     }
@@ -349,41 +327,6 @@
       })
       .join("");
 
-    const conflicts = Storage.getConflictCopies(roomNumber);
-    if (conflicts.length) {
-      list.innerHTML +=
-        '<h2 class="section-subtitle">עותקים מיובאים (לא דרסו את המקומי)</h2>' +
-        conflicts
-          .map(function (cc) {
-            const insp = cc.inspection || {};
-            const stats = Storage.getStats(insp);
-            return (
-              '<div class="detail-card">' +
-              '<div class="list-card-top">' +
-              "<strong>בדיקה " +
-              escapeHtml(String(cc.originalInspectionNumber)) +
-              " — עותק מיובא</strong>" +
-              '<span class="status-pill">מיזוג</span></div>' +
-              '<div class="list-card-meta">' +
-              escapeHtml(cc.label || "") +
-              "<br>יובא: " +
-              escapeHtml((cc.importedAt || "").slice(0, 19).replace("T", " ")) +
-              " · ליקויים: " +
-              stats.defects +
-              "</div>" +
-              '<div class="btn-row">' +
-              '<button type="button" class="btn btn-primary" data-edit-conflict="' +
-              escapeHtml(cc.id) +
-              '">עריכת העותק</button>' +
-              '<button type="button" class="btn btn-secondary" data-pdf-conflict="' +
-              escapeHtml(cc.id) +
-              '">PDF לעותק</button>' +
-              "</div></div>"
-            );
-          })
-          .join("");
-    }
-
     qsa("[data-open-insp]", list).forEach(function (btn) {
       btn.onclick = function () {
         openInspectionSummary(roomNumber, btn.dataset.openInsp);
@@ -397,43 +340,6 @@
     qsa("[data-pdf-insp]", list).forEach(function (btn) {
       btn.onclick = function () {
         openPdfScreen(roomNumber, btn.dataset.pdfInsp);
-      };
-    });
-    qsa("[data-edit-conflict]", list).forEach(function (btn) {
-      btn.onclick = function () {
-        if (!loadConflictCurrent(roomNumber, btn.dataset.editConflict)) {
-          alert("העותק המיובא לא נמצא.");
-          return;
-        }
-        showScreen("inspection");
-        renderInspectionHeader();
-        renderChecklist();
-      };
-    });
-    qsa("[data-pdf-conflict]", list).forEach(function (btn) {
-      btn.onclick = function () {
-        const copy = Storage.getConflictCopy(roomNumber, btn.dataset.pdfConflict);
-        if (!copy || !copy.inspection) {
-          alert("העותק המיובא לא נמצא.");
-          return;
-        }
-        pdfContext = {
-          roomNumber: String(roomNumber),
-          inspectionNumber: copy.inspection.inspectionNumber,
-          inspection: copy.inspection
-        };
-        showScreen("pdf");
-        $("pdf-status").textContent = "";
-        PdfService.renderPreview(
-          $("pdf-preview"),
-          pdfContext.roomNumber,
-          pdfContext.inspection
-        );
-        $("pdf-filename").textContent = PdfService.pdfFileName(
-          pdfContext.roomNumber,
-          pdfContext.inspectionNumber,
-          Storage.todayISO()
-        );
       };
     });
     qsa("[data-del-insp]", list).forEach(function (btn) {
@@ -631,10 +537,7 @@
 
   function renderInspectionHeader() {
     const insp = current.inspection;
-    $("insp-room-label").textContent =
-      "חדר " +
-      current.roomNumber +
-      (current.conflictId ? " (עותק מיובא)" : "");
+    $("insp-room-label").textContent = "חדר " + current.roomNumber;
     $("insp-meta-label").textContent =
       "בדיקה " +
       current.inspectionNumber +
@@ -980,15 +883,7 @@
       return;
     }
     current.inspection.status = "completed";
-    if (current.conflictId) {
-      Storage.saveConflictInspection(
-        current.roomNumber,
-        current.conflictId,
-        current.inspection
-      );
-    } else {
-      Storage.completeInspection(current.roomNumber, current.inspectionNumber);
-    }
+    Storage.completeInspection(current.roomNumber, current.inspectionNumber);
     setSaveIndicator("saved");
     alert("הבדיקה נשמרה בהצלחה.");
     renderHome();
@@ -1092,68 +987,57 @@
     $("nav-saved").onclick = openSavedRooms;
     $("nav-search").onclick = openSearch;
     $("nav-pdf").onclick = openPdfPicker;
-    $("nav-about").onclick = openAbout;
-    $("nav-export-backup").onclick = function () {
-      try {
-        const result = Backup.exportFull();
-        alert("הגיבוי הורד בהצלחה:\n" + result.filename);
-      } catch (e) {
-        console.error(e);
-        alert("ייצוא הגיבוי נכשל.");
+    $("nav-full-pdf-backup").onclick = function () {
+      const store = Storage.getAll();
+      const roomCount = Object.keys(store.rooms || {}).length;
+      if (!roomCount) {
+        alert("אין חדרים שמורים ליצירת גיבוי.");
+        return;
       }
-    };
-
-    const fileInput = $("backup-file-input");
-
-    $("nav-import-merge").onclick = function () {
       if (
         !confirm(
-          "ייבוא ומיזוג: הנתונים מהקובץ יתווספו לנתונים הקיימים במכשיר.\n" +
-            "חדרים ובדיקות קיימים לא יימחקו.\n" +
-            "אם יש התנגשות — יישמרו שתי הגרסאות.\n\n" +
-            "לפני הייבוא יורד גם גיבוי בטיחות של המכשיר הנוכחי.\nלהמשיך?"
+          "הגיבוי יכלול את כל החדרים וכל הבדיקות השמורים במכשיר, כולל בדיקות בתהליך. האם להמשיך?"
         )
       ) {
         return;
       }
-      Backup.exportSafetyCopy();
-      fileInput.value = "";
-      fileInput.click();
-    };
-
-    fileInput.addEventListener("change", function () {
-      const file = fileInput.files && fileInput.files[0];
-      if (!file) return;
-      Backup.readFileAsText(file)
-        .then(function (text) {
-          const summary = Backup.mergeFromBackup(text);
-          let msg =
-            "המיזוג הושלם.\n" +
-            "חדרים חדשים: " +
-            summary.roomsAdded +
-            "\nבדיקות חדשות: " +
-            summary.inspectionsAdded +
-            "\nזהות (דולגו): " +
-            summary.inspectionsSkippedSame +
-            "\nהתנגשויות (נשמרו שתיהן): " +
-            summary.conflictsKeptBoth;
-          if (summary.conflictDetails.length) {
-            msg +=
-              "\n\nפרטי התנגשות:\n" +
-              summary.conflictDetails
-                .map(function (d) {
-                  return "חדר " + d.roomNumber + " בדיקה " + d.inspectionNumber;
-                })
-                .join("\n");
+      const statusEl = $("save-indicator");
+      if (statusEl) {
+        statusEl.classList.remove("is-hidden", "is-saved");
+        statusEl.classList.add("is-saving");
+        statusEl.textContent = "יוצר גיבוי PDF…";
+      }
+      PdfService.downloadFullBackup()
+        .then(function (result) {
+          if (statusEl) {
+            statusEl.classList.remove("is-saving");
+            statusEl.classList.add("is-saved");
+            statusEl.textContent = "נשמר";
+            setTimeout(function () {
+              statusEl.classList.add("is-hidden");
+            }, 1200);
           }
-          alert(msg);
-          renderHome();
+          alert(
+            "הגיבוי המלא נוצר בהצלחה. נכללו בו " +
+              result.rooms +
+              " חדרים ו־" +
+              result.inspections +
+              " בדיקות."
+          );
         })
         .catch(function (err) {
           console.error(err);
-          alert(err.message || "ייבוא הגיבוי נכשל.");
+          if (statusEl) {
+            statusEl.classList.add("is-hidden");
+            statusEl.classList.remove("is-saving");
+          }
+          alert(
+            (err && err.message) ||
+              "יצירת הגיבוי נכשלה. הנתונים המקומיים לא השתנו."
+          );
         });
-    });
+    };
+    $("nav-about").onclick = openAbout;
 
     qsa("[data-back]").forEach(function (btn) {
       btn.onclick = function () {
