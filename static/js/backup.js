@@ -216,19 +216,6 @@
       return summary;
     },
 
-    /**
-     * Replace entire local store with backup (destructive) — caller must confirm.
-     */
-    replaceFromBackup(backupObj) {
-      const incoming = parseBackupFile(
-        typeof backupObj === "string" ? backupObj : JSON.stringify(backupObj)
-      );
-      const data = clone(incoming.data || emptyLike());
-      if (!data.rooms) data.rooms = {};
-      global.Storage.writeAll(data);
-      return { rooms: Object.keys(data.rooms).length };
-    },
-
     readFileAsText(file) {
       return new Promise(function (resolve, reject) {
         const reader = new FileReader();
@@ -242,10 +229,6 @@
       });
     }
   };
-
-  function emptyLike() {
-    return { rooms: {}, lastActive: null, version: 1 };
-  }
 
   global.Backup = Backup;
 })(window);

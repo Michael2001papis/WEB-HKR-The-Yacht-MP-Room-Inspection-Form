@@ -1103,7 +1103,6 @@
       }
     };
 
-    let pendingImportMode = "merge"; // merge | replace
     const fileInput = $("backup-file-input");
 
     $("nav-import-merge").onclick = function () {
@@ -1117,24 +1116,6 @@
       ) {
         return;
       }
-      pendingImportMode = "merge";
-      Backup.exportSafetyCopy();
-      fileInput.value = "";
-      fileInput.click();
-    };
-
-    $("nav-import-replace").onclick = function () {
-      if (
-        !confirm(
-          "ייבוא גיבוי — שימו לב:\n" +
-            "מומלץ לבחור «ייבוא ומיזוג» כדי לא למחוק נתונים.\n\n" +
-            "אם תבחרו בהחלפה מלאה בהמשך, כל הנתונים המקומיים יוחלפו בתוכן הקובץ.\n\n" +
-            "לפני הייבוא יורד גיבוי בטיחות של המכשיר הנוכחי.\nלהמשיך לבחירת קובץ?"
-        )
-      ) {
-        return;
-      }
-      pendingImportMode = "replace";
       Backup.exportSafetyCopy();
       fileInput.value = "";
       fileInput.click();
@@ -1145,48 +1126,27 @@
       if (!file) return;
       Backup.readFileAsText(file)
         .then(function (text) {
-          if (pendingImportMode === "merge") {
-            const summary = Backup.mergeFromBackup(text);
-            let msg =
-              "המיזוג הושלם.\n" +
-              "חדרים חדשים: " +
-              summary.roomsAdded +
-              "\nבדיקות חדשות: " +
-              summary.inspectionsAdded +
-              "\nזהות (דולגו): " +
-              summary.inspectionsSkippedSame +
-              "\nהתנגשויות (נשמרו שתיהן): " +
-              summary.conflictsKeptBoth;
-            if (summary.conflictDetails.length) {
-              msg +=
-                "\n\nפרטי התנגשות:\n" +
-                summary.conflictDetails
-                  .map(function (d) {
-                    return "חדר " + d.roomNumber + " בדיקה " + d.inspectionNumber;
-                  })
-                  .join("\n");
-            }
-            alert(msg);
-            renderHome();
-            return;
+          const summary = Backup.mergeFromBackup(text);
+          let msg =
+            "המיזוג הושלם.\n" +
+            "חדרים חדשים: " +
+            summary.roomsAdded +
+            "\nבדיקות חדשות: " +
+            summary.inspectionsAdded +
+            "\nזהות (דולגו): " +
+            summary.inspectionsSkippedSame +
+            "\nהתנגשויות (נשמרו שתיהן): " +
+            summary.conflictsKeptBoth;
+          if (summary.conflictDetails.length) {
+            msg +=
+              "\n\nפרטי התנגשות:\n" +
+              summary.conflictDetails
+                .map(function (d) {
+                  return "חדר " + d.roomNumber + " בדיקה " + d.inspectionNumber;
+                })
+                .join("\n");
           }
-
-          // replace mode — second confirmation
-          if (
-            !confirm(
-              "החלפה מלאה של כל הנתונים המקומיים בתוכן הקובץ?\n" +
-                "פעולה זו תמחק את המצב הנוכחי במכשיר ותחליף אותו בגיבוי.\n" +
-                "גיבוי בטיחות כבר הורד.\n\n" +
-                "לאשר החלפה מלאה?"
-            )
-          ) {
-            alert("הייבוא בוטל. הנתונים המקומיים לא שונו.");
-            return;
-          }
-          const replaced = Backup.replaceFromBackup(text);
-          alert(
-            "הייבוא וההחלפה הושלמו.\nמספר חדרים בגיבוי: " + replaced.rooms
-          );
+          alert(msg);
           renderHome();
         })
         .catch(function (err) {
