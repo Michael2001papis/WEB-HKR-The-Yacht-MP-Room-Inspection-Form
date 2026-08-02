@@ -1028,6 +1028,21 @@ img {
   break-inside: avoid;
 }
 
+.pdf-backup-cover {
+  page-break-after: always;
+  break-after: page;
+  padding: 24px 8px;
+}
+
+.pdf-backup-section {
+  page-break-before: always;
+  break-before: page;
+}
+
+.pdf-full-backup {
+  background: #fff;
+}
+
 .pdf-footer-note {
   margin-top: 14px;
   font-size: 10px;
