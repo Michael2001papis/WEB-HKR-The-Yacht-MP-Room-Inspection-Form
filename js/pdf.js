@@ -97,7 +97,7 @@
       '<div class="pdf-root" dir="rtl">' +
       '<div class="pdf-header">' +
       '<div class="pdf-brand">' +
-      '<img class="pdf-logo" src="IMG/logo.png" alt="">' +
+      '<img class="pdf-logo" src="IMG/LOGO.png" alt="">' +
       "<div>" +
       '<div class="pdf-title">' +
       escapeHtml(formName) +

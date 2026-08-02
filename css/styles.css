@@ -1,7 +1,7 @@
 :root {
   --bg0: #e8eef1;
   --bg1: #f5f8fa;
-  --surface: rgba(255, 255, 255, 0.92);
+  --surface: rgba(255, 255, 255, 0.94);
   --surface-solid: #ffffff;
   --ink: #13252c;
   --muted: #5a6f78;
@@ -10,9 +10,9 @@
   --brand-2: #1a6b7c;
   --accent: #c8a45a;
   --ok: #1f7a4c;
-  --ok-bg: rgba(230, 245, 236, 0.95);
+  --ok-bg: rgba(230, 245, 236, 0.96);
   --bad: #b42318;
-  --bad-bg: rgba(253, 236, 234, 0.95);
+  --bad-bg: rgba(253, 236, 234, 0.96);
   --warn: #9a6b00;
   --shadow: 0 8px 24px rgba(11, 58, 74, 0.12);
   --radius: 16px;
@@ -21,7 +21,7 @@
   --max: 720px;
   --bg-phone: url("../IMG/PCOG.png");
   --bg-desk: url("../IMG/CCOG.png");
-  --bg-overlay: rgba(245, 248, 250, 0.55);
+  --bg-overlay: rgba(245, 248, 250, 0.42);
 }
 
 *,
@@ -42,25 +42,35 @@ body {
   min-height: 100vh;
   line-height: 1.45;
   background-color: var(--bg0);
+  position: relative;
+}
+
+/* Background layer — avoids background-attachment:fixed (causes tear/jank on phones) */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--bg0);
   background-image:
     linear-gradient(var(--bg-overlay), var(--bg-overlay)),
     var(--bg-phone);
   background-size: cover, cover;
   background-position: center, center;
   background-repeat: no-repeat, no-repeat;
-  background-attachment: fixed, fixed;
 }
 
-/* Desktop / tablet landscape: CCOG background */
+/* Desktop: CCOG */
 @media (min-width: 768px) {
-  body {
+  body::before {
     background-image:
-      linear-gradient(rgba(245, 248, 250, 0.5), rgba(245, 248, 250, 0.5)),
+      linear-gradient(rgba(245, 248, 250, 0.38), rgba(245, 248, 250, 0.38)),
       var(--bg-desk);
+    background-position: center, center 40%;
   }
 }
 
-/* When background images are found in IMG/ */
 body.has-bg-phone,
 body.has-bg-desk {
   /* markers only — URLs set via JS on :root */
@@ -868,9 +878,9 @@ img {
   pointer-events: none;
   background-image: var(--bg-desk, url("../IMG/CCOG.png"));
   background-size: cover;
-  background-position: center;
+  background-position: center 40%;
   background-repeat: no-repeat;
-  opacity: 0.1;
+  opacity: 0.07;
 }
 
 .pdf-root > * {
