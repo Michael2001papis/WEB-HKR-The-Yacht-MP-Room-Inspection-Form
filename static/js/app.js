@@ -734,13 +734,14 @@
       btn.onclick = function () {
         const key = btn.dataset.key;
         const status = btn.dataset.status;
+        const row = current.inspection.items[key];
+        const nextStatus = row.status === status ? null : status;
         scheduleSave(function () {
-          const row = current.inspection.items[key];
-          // Exclusive: ok XOR not_ok — tapping same clears? Spec: cannot mark both. Keep selection.
-          row.status = status;
+          // Tap again on the same choice to clear the mark
+          current.inspection.items[key].status = nextStatus;
         });
         renderChecklist();
-        if (status === "not_ok") {
+        if (nextStatus === "not_ok") {
           const ta = document.getElementById("note-" + key);
           if (ta) {
             ta.focus();
