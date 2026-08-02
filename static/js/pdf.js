@@ -97,7 +97,7 @@
       '<div class="pdf-root" dir="rtl">' +
       '<div class="pdf-header">' +
       '<div class="pdf-brand">' +
-      '<img class="pdf-logo" src="IMG/LOGO.png" alt="">' +
+      '<img class="pdf-logo" src="static/IMG/LOGO.png" alt="">' +
       "<div>" +
       '<div class="pdf-title">' +
       escapeHtml(formName) +
@@ -299,7 +299,7 @@
             pdfFileName(roomNumber, inspection.inspectionNumber, global.Storage.todayISO())
           ) +
           "</title>" +
-          '<link rel="stylesheet" href="css/styles.css">' +
+          '<link rel="stylesheet" href="static/css/styles.css">' +
           '<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700&display=swap" rel="stylesheet">' +
           "<style>body{background:#fff;margin:0;padding:12px;}#pdf-worker{position:static!important;left:auto!important;width:auto!important;}</style>" +
           "</head><body>" +

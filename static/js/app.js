@@ -1020,58 +1020,9 @@
     window.addEventListener("beforeunload", persistCurrent);
   }
 
-  function resolveBackgroundImages() {
-    const exts = [".png", ".jpg", ".jpeg", ".webp"];
-    function probe(baseName) {
-      return new Promise(function (resolve) {
-        let i = 0;
-        function tryNext() {
-          if (i >= exts.length) {
-            resolve(null);
-            return;
-          }
-          const url = "IMG/" + baseName + exts[i++];
-          const img = new Image();
-          img.onload = function () {
-            resolve(url);
-          };
-          img.onerror = tryNext;
-          img.src = url;
-        }
-        tryNext();
-      });
-    }
-
-    Promise.all([probe("PCOG"), probe("CCOG")]).then(function (urls) {
-      const phone = urls[0];
-      const desk = urls[1];
-      if (!phone && !desk) return;
-
-      let style = document.getElementById("bg-images-style");
-      if (!style) {
-        style = document.createElement("style");
-        style.id = "bg-images-style";
-        document.head.appendChild(style);
-      }
-
-      let css = ":root{";
-      if (phone) {
-        css += '--bg-phone:url("' + phone + '");';
-        document.body.classList.add("has-bg-phone");
-      }
-      if (desk) {
-        css += '--bg-desk:url("' + desk + '");';
-        document.body.classList.add("has-bg-desk");
-      }
-      css += "}";
-      style.textContent = css;
-    });
-  }
-
   function init() {
     $("app-title").textContent = APP_META.name;
     $("footer-copy").textContent = APP_META.copyright;
-    resolveBackgroundImages();
     bindGlobal();
     renderHome();
   }
