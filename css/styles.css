@@ -1,7 +1,8 @@
 :root {
   --bg0: #e8eef1;
   --bg1: #f5f8fa;
-  --surface: #ffffff;
+  --surface: rgba(255, 255, 255, 0.92);
+  --surface-solid: #ffffff;
   --ink: #13252c;
   --muted: #5a6f78;
   --line: #d0dde3;
@@ -9,15 +10,18 @@
   --brand-2: #1a6b7c;
   --accent: #c8a45a;
   --ok: #1f7a4c;
-  --ok-bg: #e6f5ec;
+  --ok-bg: rgba(230, 245, 236, 0.95);
   --bad: #b42318;
-  --bad-bg: #fdecea;
+  --bad-bg: rgba(253, 236, 234, 0.95);
   --warn: #9a6b00;
-  --shadow: 0 8px 24px rgba(11, 58, 74, 0.08);
+  --shadow: 0 8px 24px rgba(11, 58, 74, 0.12);
   --radius: 16px;
   --tap: 48px;
   --font: "Heebo", "Segoe UI", Tahoma, sans-serif;
   --max: 720px;
+  --bg-phone: url("../IMG/PCOG.png");
+  --bg-desk: url("../IMG/CCOG.png");
+  --bg-overlay: rgba(245, 248, 250, 0.55);
 }
 
 *,
@@ -35,12 +39,31 @@ body {
   margin: 0;
   font-family: var(--font);
   color: var(--ink);
-  background:
-    radial-gradient(1200px 500px at 100% -10%, rgba(26, 107, 124, 0.18), transparent 55%),
-    radial-gradient(900px 400px at 0% 0%, rgba(200, 164, 90, 0.14), transparent 50%),
-    linear-gradient(180deg, var(--bg1), var(--bg0));
   min-height: 100vh;
   line-height: 1.45;
+  background-color: var(--bg0);
+  background-image:
+    linear-gradient(var(--bg-overlay), var(--bg-overlay)),
+    var(--bg-phone);
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+  background-attachment: fixed, fixed;
+}
+
+/* Desktop / tablet landscape: CCOG background */
+@media (min-width: 768px) {
+  body {
+    background-image:
+      linear-gradient(rgba(245, 248, 250, 0.5), rgba(245, 248, 250, 0.5)),
+      var(--bg-desk);
+  }
+}
+
+/* When background images are found in IMG/ */
+body.has-bg-phone,
+body.has-bg-desk {
+  /* markers only — URLs set via JS on :root */
 }
 
 button,
@@ -80,7 +103,7 @@ img {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
 }
@@ -229,7 +252,6 @@ img {
   min-height: 108px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: var(--surface);
   box-shadow: var(--shadow);
   color: inherit;
   transition: transform 0.15s ease, border-color 0.15s ease;
@@ -286,10 +308,19 @@ img {
 .about-card,
 .detail-card {
   background: var(--surface);
+  backdrop-filter: blur(6px);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 16px;
   box-shadow: var(--shadow);
+}
+
+.general-notes-card,
+.category-card,
+.list-card,
+.home-tile {
+  background: var(--surface);
+  backdrop-filter: blur(6px);
 }
 
 .field {
@@ -564,6 +595,7 @@ img {
   border-radius: 6px;
   page-break-inside: avoid;
   break-inside: avoid;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .pdf-general-notes h3 {
@@ -647,7 +679,7 @@ img {
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 14px 12px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.94);
 }
 
 .item-row.is-defect {
@@ -742,7 +774,7 @@ img {
   left: 0;
   z-index: 30;
   padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(255, 255, 255, 0.9);
   border-top: 1px solid var(--line);
   backdrop-filter: blur(8px);
 }
@@ -820,9 +852,30 @@ img {
   direction: rtl;
   font-family: var(--font);
   color: #111;
-  background: #fff;
+  background-color: #fff;
   padding: 8px;
   width: 100%;
+  position: relative;
+  isolation: isolate;
+}
+
+/* Subtle background watermark in PDF — visible but delicate */
+.pdf-root::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--bg-desk, url("../IMG/CCOG.png"));
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.1;
+}
+
+.pdf-root > * {
+  position: relative;
+  z-index: 1;
 }
 
 .pdf-header {
@@ -833,6 +886,9 @@ img {
   border-bottom: 2px solid #0b3a4a;
   padding-bottom: 10px;
   margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 6px 6px 0 0;
+  padding: 8px;
 }
 
 .pdf-brand {
@@ -870,7 +926,7 @@ img {
   font-size: 12px;
   margin-bottom: 10px;
   padding: 8px 10px;
-  background: #f3f7f8;
+  background: rgba(243, 247, 248, 0.92);
   border-radius: 8px;
 }
 
@@ -879,6 +935,7 @@ img {
   border-collapse: collapse;
   table-layout: fixed;
   font-size: 11px;
+  background: rgba(255, 255, 255, 0.86);
 }
 
 .pdf-table th,
@@ -888,10 +945,11 @@ img {
   vertical-align: top;
   word-wrap: break-word;
   overflow-wrap: anywhere;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .pdf-table th {
-  background: #0b3a4a;
+  background: rgba(11, 58, 74, 0.96);
   color: #fff;
   font-weight: 700;
 }
@@ -925,7 +983,7 @@ img {
 }
 
 .pdf-cat td {
-  background: #d9e7ec;
+  background: rgba(217, 231, 236, 0.94);
   font-weight: 700;
   color: #0b3a4a;
 }
