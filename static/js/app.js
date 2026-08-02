@@ -603,7 +603,10 @@
         "</button>" +
         '<div class="category-body"' +
         (opened ? "" : " hidden") +
-        ">";
+        ">" +
+        '<button type="button" class="btn btn-mark-ok" data-mark-cat-ok="' +
+        cat.id +
+        '">הכל תקין בקטגוריה זו</button>';
 
       cat.items.forEach(function (item) {
         html += renderItemRow(cat, item);
@@ -614,6 +617,34 @@
 
     root.innerHTML = html;
     bindChecklistEvents(root);
+  }
+
+  function ensureItemRow(key, item) {
+    if (!current.inspection.items[key]) {
+      current.inspection.items[key] = {
+        exists: item.optionalExists ? null : true,
+        status: null,
+        note: ""
+      };
+    }
+    return current.inspection.items[key];
+  }
+
+  /** Mark empty eligible rows as ok — never overwrite existing status. */
+  function markEmptyItemsOk(categoryId) {
+    let changed = 0;
+    CHECKLIST.forEach(function (cat) {
+      if (categoryId && cat.id !== categoryId) return;
+      cat.items.forEach(function (item) {
+        const key = itemKey(cat.id, item.id);
+        const row = ensureItemRow(key, item);
+        if (item.optionalExists && row.exists !== true) return;
+        if (row.status != null) return;
+        row.status = "ok";
+        changed++;
+      });
+    });
+    return changed;
   }
 
   function renderItemRow(cat, item) {
@@ -710,6 +741,17 @@
         body.hidden = !willOpen;
         card.classList.toggle("is-open", willOpen);
         btn.setAttribute("aria-expanded", willOpen ? "true" : "false");
+      };
+    });
+
+    qsa("[data-mark-cat-ok]", root).forEach(function (btn) {
+      btn.onclick = function (e) {
+        e.stopPropagation();
+        const catId = btn.dataset.markCatOk;
+        scheduleSave(function () {
+          markEmptyItemsOk(catId);
+        });
+        renderChecklist();
       };
     });
 
@@ -981,6 +1023,12 @@
       });
     });
 
+    $("btn-room-all-ok").onclick = function () {
+      scheduleSave(function () {
+        markEmptyItemsOk(null);
+      });
+      renderChecklist();
+    };
     $("btn-to-summary").onclick = openSummary;
     $("btn-summary-edit").onclick = function () {
       showScreen("inspection");
