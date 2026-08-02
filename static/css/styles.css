@@ -1,7 +1,7 @@
 :root {
   --bg0: #e8eef1;
   --bg1: #f5f8fa;
-  --surface: rgba(255, 255, 255, 0.94);
+  --surface: rgba(255, 255, 255, 0.9);
   --surface-solid: #ffffff;
   --ink: #13252c;
   --muted: #5a6f78;
@@ -19,8 +19,6 @@
   --tap: 48px;
   --font: "Heebo", "Segoe UI", Tahoma, sans-serif;
   --max: 720px;
-  --bg-phone: url("../IMG/PCOG.png");
-  --bg-desk: url("../IMG/CCOG.png");
 }
 
 *,
@@ -32,6 +30,22 @@
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  min-height: 100%;
+  /* Phone background (PCOG) — one photo only */
+  background-color: #0f1c22;
+  background-image: url("../IMG/PCOG.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: scroll;
+}
+
+/* Desktop background (CCOG) */
+@media (min-width: 768px) {
+  html {
+    background-image: url("../IMG/CCOG.jpg");
+    background-position: center 45%;
+  }
 }
 
 body {
@@ -41,34 +55,6 @@ body {
   min-height: 100vh;
   line-height: 1.45;
   background: transparent;
-  position: relative;
-}
-
-/* Single photo background only — no white wash layer */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-color: #1a2a32;
-  background-image: var(--bg-phone);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
-/* Desktop: CCOG */
-@media (min-width: 768px) {
-  body::before {
-    background-image: var(--bg-desk);
-    background-position: center 40%;
-  }
-}
-
-body.has-bg-phone,
-body.has-bg-desk {
-  /* markers only — URLs set via JS on :root */
 }
 
 button,
@@ -92,11 +78,14 @@ img {
 }
 
 #app {
+  position: relative;
+  z-index: 1;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   max-width: var(--max);
   margin: 0 auto;
+  background: transparent;
 }
 
 .app-header {
@@ -108,7 +97,7 @@ img {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
 }
@@ -125,10 +114,13 @@ img {
 }
 
 .brand-logo {
-  width: 44px;
+  width: auto;
   height: 44px;
-  border-radius: 12px;
+  max-width: 140px;
+  border-radius: 8px;
   flex-shrink: 0;
+  object-fit: contain;
+  background: #000;
 }
 
 .brand-text {
@@ -179,9 +171,11 @@ img {
 .app-footer {
   padding: 14px 16px 22px;
   text-align: center;
-  color: var(--muted);
+  color: #fff;
   font-size: 0.8rem;
-  border-top: 1px solid rgba(208, 221, 227, 0.8);
+  border-top: 0;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  background: transparent;
 }
 
 .screen {
@@ -203,6 +197,7 @@ img {
   font-size: 1.45rem;
   color: var(--brand);
   letter-spacing: -0.02em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
 .section-subtitle {
@@ -213,11 +208,13 @@ img {
 
 .back-link {
   border: 0;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.75);
   color: var(--brand-2);
   font-weight: 600;
-  padding: 0 0 10px;
+  padding: 8px 12px;
   min-height: 36px;
+  border-radius: 10px;
+  margin-bottom: 8px;
 }
 
 .continue-banner {
@@ -267,7 +264,7 @@ img {
 }
 
 .home-tile-muted {
-  background: #f7fafb;
+  background: rgba(247, 250, 251, 0.88);
 }
 
 .tile-icon {
@@ -871,11 +868,11 @@ img {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image: var(--bg-desk, url("../IMG/CCOG.png"));
+  background-image: url("../IMG/CCOG.jpg");
   background-size: cover;
-  background-position: center 40%;
+  background-position: center 45%;
   background-repeat: no-repeat;
-  opacity: 0.07;
+  opacity: 0.08;
 }
 
 .pdf-root > * {
@@ -903,8 +900,13 @@ img {
 }
 
 .pdf-logo {
-  width: 48px;
-  height: 48px;
+  width: auto;
+  height: 42px;
+  max-width: 120px;
+  object-fit: contain;
+  background: #000;
+  border-radius: 4px;
+  padding: 4px 6px;
 }
 
 .pdf-title {
