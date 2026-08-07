@@ -1,21 +1,34 @@
 /**
- * Persistent storage for room inspections (localStorage).
- * Each room keeps all inspections (1 and 2) separately — never overwrite.
+ * Local cache for room inspections (offline-first).
+ * Legacy key yacht-room-inspections-v1 is never deleted by this layer.
+ * Per-user cloud cache is used after login; Supabase is the primary store.
  */
 (function (global) {
-  const STORAGE_KEY = "yacht-room-inspections-v1";
+  const LEGACY_KEY = "yacht-room-inspections-v1";
+  const CACHE_PREFIX = "yacht-cloud-cache-v1:";
+
+  let activeUserId = null;
+  let changeListeners = [];
 
   function emptyStore() {
     return {
       rooms: {},
       lastActive: null,
-      version: 1
+      version: 2,
+      userId: activeUserId || null
     };
   }
 
+  function cacheKey() {
+    if (!activeUserId) return null;
+    return CACHE_PREFIX + activeUserId;
+  }
+
   function load() {
+    const key = cacheKey();
+    if (!key) return emptyStore();
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(key);
       if (!raw) return emptyStore();
       const data = JSON.parse(raw);
       if (!data || typeof data !== "object") return emptyStore();
@@ -28,7 +41,21 @@
   }
 
   function save(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    const key = cacheKey();
+    if (!key) return;
+    data.userId = activeUserId;
+    data.version = 2;
+    localStorage.setItem(key, JSON.stringify(data));
+  }
+
+  function notifyChange(detail) {
+    changeListeners.forEach(function (fn) {
+      try {
+        fn(detail || {});
+      } catch (e) {
+        console.error(e);
+      }
+    });
   }
 
   function todayISO() {
@@ -62,6 +89,17 @@
     return parts[2] + "-" + parts[1] + "-" + parts[0];
   }
 
+  function newId() {
+    if (global.crypto && typeof global.crypto.randomUUID === "function") {
+      return global.crypto.randomUUID();
+    }
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+      const r = (Math.random() * 16) | 0;
+      const v = c === "x" ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  }
+
   function createEmptyItems() {
     const items = {};
     for (const key of global.allItemKeys()) {
@@ -78,6 +116,7 @@
   function createInspection(inspectionNumber, meta) {
     const now = new Date().toISOString();
     return {
+      id: newId(),
       inspectionNumber: inspectionNumber,
       date: todayISO(),
       roomType: (meta && meta.roomType) || "",
@@ -86,7 +125,10 @@
       status: "in_progress",
       items: createEmptyItems(),
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      dirty: true,
+      lastSyncedAt: null,
+      legacyKey: null
     };
   }
 
@@ -163,10 +205,63 @@
     return missing;
   }
 
+  function markDirty(inspection) {
+    if (!inspection) return;
+    inspection.dirty = true;
+    inspection.updatedAt = new Date().toISOString();
+  }
+
   const Storage = {
+    LEGACY_KEY: LEGACY_KEY,
     todayISO,
     formatDisplayDate,
     formatFileDate,
+    newId,
+
+    onChange(fn) {
+      changeListeners.push(fn);
+    },
+
+    setActiveUser(userId) {
+      activeUserId = userId ? String(userId) : null;
+    },
+
+    getActiveUser() {
+      return activeUserId;
+    },
+
+    replaceStore(data) {
+      if (!activeUserId) return;
+      const next = data && typeof data === "object" ? data : emptyStore();
+      if (!next.rooms) next.rooms = {};
+      save(next);
+      notifyChange({ type: "replace" });
+    },
+
+    getLegacyStore() {
+      try {
+        const raw = localStorage.getItem(LEGACY_KEY);
+        if (!raw) return emptyStore();
+        const data = JSON.parse(raw);
+        if (!data || typeof data !== "object") return emptyStore();
+        if (!data.rooms) data.rooms = {};
+        return data;
+      } catch (e) {
+        console.error("Failed to load legacy store", e);
+        return emptyStore();
+      }
+    },
+
+    countLegacy() {
+      const store = this.getLegacyStore();
+      const roomKeys = Object.keys(store.rooms || {});
+      let inspections = 0;
+      roomKeys.forEach(function (rk) {
+        const room = store.rooms[rk];
+        inspections += Object.keys((room && room.inspections) || {}).length;
+      });
+      return { rooms: roomKeys.length, inspections: inspections };
+    },
 
     getAll() {
       return load();
@@ -181,6 +276,21 @@
       const room = this.getRoom(roomNumber);
       if (!room) return null;
       return room.inspections[String(inspectionNumber)] || null;
+    },
+
+    getInspectionById(id) {
+      const store = load();
+      const rooms = store.rooms || {};
+      for (const rk of Object.keys(rooms)) {
+        const room = rooms[rk];
+        for (const ik of Object.keys(room.inspections || {})) {
+          const insp = room.inspections[ik];
+          if (insp && insp.id === id) {
+            return { roomNumber: room.roomNumber, inspection: insp };
+          }
+        }
+      }
+      return null;
     },
 
     listRooms() {
@@ -259,12 +369,15 @@
         inspectionNumber: num
       };
       save(store);
+      notifyChange({
+        type: "upsert",
+        roomNumber: room.roomNumber,
+        inspectionNumber: num,
+        inspection: inspection
+      });
       return { room, inspection };
     },
 
-    /**
-     * Upsert current working inspection fields (auto-save).
-     */
     saveInspection(roomNumber, inspectionNumber, patch) {
       const store = load();
       const room = ensureRoom(store, roomNumber);
@@ -274,6 +387,7 @@
         inspection = createInspection(Number(inspectionNumber), patch);
         room.inspections[key] = inspection;
       }
+      if (!inspection.id) inspection.id = newId();
 
       if (patch) {
         if (patch.roomType !== undefined) inspection.roomType = patch.roomType;
@@ -282,6 +396,10 @@
         if (patch.date !== undefined) inspection.date = patch.date;
         if (patch.status !== undefined) inspection.status = patch.status;
         if (patch.items !== undefined) inspection.items = patch.items;
+        if (patch.id !== undefined) inspection.id = patch.id;
+        if (patch.legacyKey !== undefined) inspection.legacyKey = patch.legacyKey;
+        if (patch.dirty !== undefined) inspection.dirty = patch.dirty;
+        if (patch.lastSyncedAt !== undefined) inspection.lastSyncedAt = patch.lastSyncedAt;
         if (patch.itemKey && patch.itemValue) {
           inspection.items[patch.itemKey] = Object.assign(
             {},
@@ -291,13 +409,24 @@
         }
       }
 
-      inspection.updatedAt = new Date().toISOString();
+      if (patch && patch.dirty === false) {
+        inspection.dirty = false;
+        if (!inspection.updatedAt) inspection.updatedAt = new Date().toISOString();
+      } else {
+        markDirty(inspection);
+      }
       room.updatedAt = inspection.updatedAt;
       store.lastActive = {
         roomNumber: room.roomNumber,
         inspectionNumber: Number(inspectionNumber)
       };
       save(store);
+      notifyChange({
+        type: "upsert",
+        roomNumber: room.roomNumber,
+        inspectionNumber: Number(inspectionNumber),
+        inspection: inspection
+      });
       return inspection;
     },
 
@@ -314,10 +443,106 @@
       });
     },
 
-    deleteInspection(roomNumber, inspectionNumber) {
+    markSynced(roomNumber, inspectionNumber, serverUpdatedAt) {
       const store = load();
       const room = store.rooms[String(roomNumber)];
       if (!room) return;
+      const inspection = room.inspections[String(inspectionNumber)];
+      if (!inspection) return;
+      inspection.dirty = false;
+      inspection.lastSyncedAt = serverUpdatedAt || new Date().toISOString();
+      if (serverUpdatedAt) inspection.updatedAt = serverUpdatedAt;
+      save(store);
+    },
+
+    putRemoteInspection(row, opts) {
+      const options = opts || {};
+      const store = load();
+      const roomNumber = String(row.room_number);
+      const inspNum = Number(row.inspection_number);
+      const room = ensureRoom(store, roomNumber);
+      const existing = room.inspections[String(inspNum)];
+      const remoteUpdated = row.updated_at;
+      const payload = row.payload || {};
+
+      if (
+        existing &&
+        existing.dirty &&
+        existing.id === row.id &&
+        existing.updatedAt &&
+        remoteUpdated &&
+        existing.updatedAt !== remoteUpdated &&
+        existing.lastSyncedAt &&
+        remoteUpdated > existing.lastSyncedAt
+      ) {
+        return { conflict: true, local: existing, remote: row };
+      }
+
+      if (
+        existing &&
+        existing.dirty &&
+        existing.id === row.id &&
+        !options.forceRemote
+      ) {
+        return { conflict: false, skipped: true, inspection: existing };
+      }
+
+      const inspection = Object.assign({}, payload, {
+        id: row.id,
+        inspectionNumber: inspNum,
+        date: row.inspection_date || payload.date || todayISO(),
+        roomType: row.room_type != null ? row.room_type : payload.roomType || "",
+        status: row.status || payload.status || "in_progress",
+        createdAt: row.created_at || payload.createdAt,
+        updatedAt: remoteUpdated || payload.updatedAt,
+        dirty: false,
+        lastSyncedAt: remoteUpdated || null,
+        legacyKey: payload.legacyKey || null,
+        extraId: payload.extraId || "",
+        generalNotes: payload.generalNotes || "",
+        items: payload.items || createEmptyItems()
+      });
+
+      room.inspections[String(inspNum)] = inspection;
+      room.updatedAt = inspection.updatedAt;
+      save(store);
+      return { conflict: false, inspection: inspection };
+    },
+
+    addSafeConflictCopy(roomNumber, inspectionNumber, remoteRow) {
+      const copyRoom = String(roomNumber) + " (עותק שרת)";
+      const store = load();
+      const room = ensureRoom(store, copyRoom);
+      const payload = (remoteRow && remoteRow.payload) || {};
+      const inspNum = Number(inspectionNumber);
+      const inspection = Object.assign({}, payload, {
+        id: newId(),
+        inspectionNumber: inspNum,
+        date: remoteRow.inspection_date || payload.date,
+        roomType: remoteRow.room_type || payload.roomType || "",
+        status: remoteRow.status || payload.status || "in_progress",
+        createdAt: remoteRow.created_at || payload.createdAt,
+        updatedAt: remoteRow.updated_at || payload.updatedAt,
+        dirty: false,
+        lastSyncedAt: null,
+        extraId: payload.extraId || "",
+        generalNotes: payload.generalNotes || "",
+        items: payload.items || createEmptyItems(),
+        isServerConflictCopy: true,
+        sourceInspectionId: remoteRow.id
+      });
+      room.inspections[String(inspNum)] = inspection;
+      room.updatedAt = inspection.updatedAt;
+      save(store);
+      return copyRoom;
+    },
+
+    deleteInspection(roomNumber, inspectionNumber) {
+      const store = load();
+      const room = store.rooms[String(roomNumber)];
+      if (!room) return null;
+      const inspection = room.inspections[String(inspectionNumber)] || null;
+      const deletedId = inspection && inspection.id ? inspection.id : null;
       delete room.inspections[String(inspectionNumber)];
       if (Object.keys(room.inspections).length === 0) {
         delete store.rooms[String(roomNumber)];
@@ -332,15 +557,34 @@
         store.lastActive = null;
       }
       save(store);
+      notifyChange({
+        type: "delete",
+        roomNumber: String(roomNumber),
+        inspectionNumber: Number(inspectionNumber),
+        id: deletedId
+      });
+      return deletedId;
     },
 
     deleteRoom(roomNumber) {
       const store = load();
+      const room = store.rooms[String(roomNumber)];
+      const ids = [];
+      if (room) {
+        Object.keys(room.inspections || {}).forEach(function (k) {
+          const insp = room.inspections[k];
+          if (insp && insp.id) ids.push(insp.id);
+        });
+      }
       delete store.rooms[String(roomNumber)];
       if (store.lastActive && store.lastActive.roomNumber === String(roomNumber)) {
         store.lastActive = null;
       }
       save(store);
+      ids.forEach(function (id) {
+        notifyChange({ type: "delete", id: id, roomNumber: String(roomNumber) });
+      });
+      return ids;
     },
 
     getInProgressInspections() {
@@ -360,6 +604,21 @@
       return list.sort((a, b) =>
         (b.inspection.updatedAt || "").localeCompare(a.inspection.updatedAt || "")
       );
+    },
+
+    listDirtyInspections() {
+      const store = load();
+      const out = [];
+      Object.keys(store.rooms || {}).forEach(function (rk) {
+        const room = store.rooms[rk];
+        Object.keys(room.inspections || {}).forEach(function (ik) {
+          const insp = room.inspections[ik];
+          if (insp && insp.dirty && !insp.isServerConflictCopy) {
+            out.push({ roomNumber: room.roomNumber, inspection: insp });
+          }
+        });
+      });
+      return out;
     },
 
     getStats: getInspectionStats,
