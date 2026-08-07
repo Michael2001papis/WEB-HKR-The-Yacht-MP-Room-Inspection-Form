@@ -31,20 +31,50 @@
     window.scrollTo(0, 0);
   }
 
-  function setSaveIndicator(state) {
+  function setSaveIndicator(state, customText) {
     saveState = state;
     const el = $("save-indicator");
     if (!el) return;
-    el.classList.remove("is-saving", "is-saved", "is-hidden");
+    el.classList.remove(
+      "is-saving",
+      "is-saved",
+      "is-hidden",
+      "is-offline",
+      "is-pending",
+      "is-error"
+    );
     if (state === "saving") {
-      el.textContent = "שומר…";
+      el.textContent = customText || "שומר…";
       el.classList.add("is-saving");
     } else if (state === "saved") {
-      el.textContent = "נשמר";
+      el.textContent = customText || "נשמר באתר";
       el.classList.add("is-saved");
+      clearTimeout(setSaveIndicator._hideTimer);
+      setSaveIndicator._hideTimer = setTimeout(function () {
+        if (saveState === "saved") setSaveIndicator("idle");
+      }, 1600);
+    } else if (state === "offline") {
+      el.textContent = customText || "אין אינטרנט – נשמר זמנית במכשיר";
+      el.classList.add("is-offline");
+    } else if (state === "pending") {
+      el.textContent = customText || "ממתין לסנכרון";
+      el.classList.add("is-pending");
+    } else if (state === "error") {
+      el.textContent =
+        customText || "השמירה נכשלה – הנתונים נשמרו זמנית במכשיר";
+      el.classList.add("is-error");
     } else {
       el.classList.add("is-hidden");
     }
+  }
+
+  function applySyncStatus(status) {
+    if (!status || !status.state) return;
+    if (status.state === "saving") setSaveIndicator("saving", status.message);
+    else if (status.state === "saved") setSaveIndicator("saved", status.message);
+    else if (status.state === "offline") setSaveIndicator("offline", status.message);
+    else if (status.state === "pending") setSaveIndicator("pending", status.message);
+    else if (status.state === "error") setSaveIndicator("error", status.message);
   }
 
   function scheduleSave(mutator) {
@@ -54,10 +84,6 @@
     clearTimeout(saveTimer);
     saveTimer = setTimeout(function () {
       persistCurrent();
-      setSaveIndicator("saved");
-      setTimeout(function () {
-        if (saveState === "saved") setSaveIndicator("idle");
-      }, 1200);
     }, 180);
   }
 
@@ -346,11 +372,11 @@
       btn.onclick = function () {
         if (
           confirm(
-            "למחוק את בדיקה " +
-              btn.dataset.delInsp +
-              " של חדר " +
+            "האם למחוק את בדיקת חדר " +
               roomNumber +
-              "? פעולה זו אינה ניתנת לביטול."
+              " – בדיקה " +
+              btn.dataset.delInsp +
+              "?"
           )
         ) {
           Storage.deleteInspection(roomNumber, btn.dataset.delInsp);
@@ -366,9 +392,7 @@
     $("btn-delete-room").onclick = function () {
       if (
         confirm(
-          "למחוק את כל הבדיקות של חדר " +
-            roomNumber +
-            "? פעולה זו אינה ניתנת לביטול."
+          "האם למחוק את כל הבדיקות של חדר " + roomNumber + "?"
         )
       ) {
         Storage.deleteRoom(roomNumber);
@@ -884,7 +908,6 @@
     }
     current.inspection.status = "completed";
     Storage.completeInspection(current.roomNumber, current.inspectionNumber);
-    setSaveIndicator("saved");
     alert("הבדיקה נשמרה בהצלחה.");
     renderHome();
   }
@@ -996,27 +1019,15 @@
       }
       if (
         !confirm(
-          "הגיבוי יכלול את כל החדרים וכל הבדיקות השמורים במכשיר, כולל בדיקות בתהליך. האם להמשיך?"
+          "הגיבוי יכלול את כל החדרים וכל הבדיקות בחשבון שלך, כולל בדיקות בתהליך. האם להמשיך?"
         )
       ) {
         return;
       }
-      const statusEl = $("save-indicator");
-      if (statusEl) {
-        statusEl.classList.remove("is-hidden", "is-saved");
-        statusEl.classList.add("is-saving");
-        statusEl.textContent = "יוצר גיבוי PDF…";
-      }
+      setSaveIndicator("saving", "יוצר גיבוי PDF…");
       PdfService.downloadFullBackup()
         .then(function (result) {
-          if (statusEl) {
-            statusEl.classList.remove("is-saving");
-            statusEl.classList.add("is-saved");
-            statusEl.textContent = "נשמר";
-            setTimeout(function () {
-              statusEl.classList.add("is-hidden");
-            }, 1200);
-          }
+          setSaveIndicator("saved", "נשמר באתר");
           alert(
             "הגיבוי המלא נוצר בהצלחה. נכללו בו " +
               result.rooms +
@@ -1027,10 +1038,7 @@
         })
         .catch(function (err) {
           console.error(err);
-          if (statusEl) {
-            statusEl.classList.add("is-hidden");
-            statusEl.classList.remove("is-saving");
-          }
+          setSaveIndicator("idle");
           alert(
             (err && err.message) ||
               "יצירת הגיבוי נכשלה. הנתונים המקומיים לא השתנו."
@@ -1038,6 +1046,16 @@
         });
     };
     $("nav-about").onclick = openAbout;
+
+    $("btn-auth-login").onclick = function () {
+      submitAuth("login");
+    };
+    $("btn-auth-signup").onclick = function () {
+      submitAuth("signup");
+    };
+    $("btn-logout").onclick = function () {
+      logoutUser();
+    };
 
     qsa("[data-back]").forEach(function (btn) {
       btn.onclick = function () {
@@ -1119,11 +1137,205 @@
     window.addEventListener("beforeunload", persistCurrent);
   }
 
-  function init() {
+  function updateAccountBar(user) {
+    const bar = $("account-bar");
+    const nameEl = $("account-name");
+    if (!bar || !nameEl) return;
+    if (user && user.id) {
+      nameEl.textContent = Auth.getDisplayName(user) || user.email || "";
+      bar.classList.remove("is-hidden");
+    } else {
+      nameEl.textContent = "";
+      bar.classList.add("is-hidden");
+    }
+  }
+
+  function showAuthScreen(message) {
+    updateAccountBar(null);
+    showScreen("auth");
+    const hint = $("auth-hint");
+    const err = $("auth-error");
+    if (err) err.textContent = "";
+    if (hint) hint.textContent = message || "";
+    if (!window.SupabaseApp || !SupabaseApp.isConfigured()) {
+      if (err) {
+        err.textContent =
+          "חסרים פרטי Supabase. יש למלא URL, anon key, ואימייל עבור MP2001 ב־static/js/supabase-config.js ואז להריץ את supabase/schema.sql.";
+      }
+    } else {
+      const mp = Auth.lookupAccount && Auth.lookupAccount("MP2001");
+      if (mp && !mp.email && err && !err.textContent) {
+        err.textContent =
+          "יש למלא את כתובת האימייל של MP2001 ב־usernameAccounts בתוך supabase-config.js (בלי סיסמה).";
+      }
+    }
+  }
+
+  async function submitAuth(mode) {
+    const err = $("auth-error");
+    const hint = $("auth-hint");
+    err.textContent = "";
+    hint.textContent = "";
+    const loginId = $("auth-username").value.trim();
+    const password = $("auth-password").value;
+    if (!loginId || !password) {
+      err.textContent = "נא למלא שם משתמש וסיסמה.";
+      return;
+    }
+    if (password.length < 6) {
+      err.textContent = "הסיסמה חייבת להכיל לפחות 6 תווים.";
+      return;
+    }
+    const identity = Auth.resolveIdentity(loginId);
+    if (!identity.ok) {
+      err.textContent = identity.error;
+      return;
+    }
+    try {
+      setSaveIndicator("saving", "מתחבר…");
+      if (mode === "signup") {
+        const data = await Auth.signUp(loginId, password);
+        if (data && data.user && !data.session) {
+          hint.textContent =
+            "החשבון נוצר. אם נדרש אימות אימייל בפרויקט Supabase — אשרו את המייל ואז התחברו. (מומלץ: Authentication → Providers → Email → כבו Confirm email לבדיקות.)";
+          setSaveIndicator("idle");
+          $("auth-password").value = "";
+          return;
+        }
+      } else {
+        await Auth.signIn(loginId, password);
+      }
+      $("auth-password").value = "";
+      await enterAppSession();
+    } catch (e) {
+      console.error(e);
+      err.textContent = (e && e.message) || "ההתחברות נכשלה";
+      setSaveIndicator("idle");
+    }
+  }
+
+  async function logoutUser() {
+    try {
+      persistCurrent();
+      await Auth.signOut();
+    } catch (e) {
+      console.error(e);
+    }
+    Storage.setActiveUser(null);
+    current.roomNumber = null;
+    current.inspectionNumber = null;
+    current.inspection = null;
+    showAuthScreen("התנתקתם בהצלחה.");
+    setSaveIndicator("idle");
+  }
+
+  async function offerLegacyMigration() {
+    if (!SyncEngine.shouldOfferMigration()) return;
+    const counts = SyncEngine.countLegacyForPrompt();
+    if (!counts.rooms && !counts.inspections) return;
+    const mig = SyncEngine.getMigrationState();
+    const resume = mig.status === "in_progress";
+    const msg = resume
+      ? "העברת הנתונים מהמערכת הקודמת טרם הסתיימה. להמשיך מהנקודה שבה נעצרה?"
+      : "נמצאו במכשיר " +
+        counts.rooms +
+        " חדרים ו־" +
+        counts.inspections +
+        " בדיקות מהמערכת הקודמת. האם להעביר אותם לחשבון הנוכחי?";
+    const ok = confirm(
+      msg +
+        (resume
+          ? "\n\nאישור = המשך העברה | ביטול = לא עכשיו"
+          : "\n\nאישור = העבר לחשבון | ביטול = לא עכשיו")
+    );
+    if (!ok) return;
+    try {
+      setSaveIndicator("saving", "מעביר נתונים…");
+      const result = await SyncEngine.migrateLegacy(function (p) {
+        setSaveIndicator("saving", "מעביר… " + p.done + "/" + p.total);
+      });
+      if (result.incomplete || !result.ok) {
+        alert(
+          "ההעברה טרם הסתיימה (" +
+            (result.done || 0) +
+            " מתוך " +
+            (result.total || 0) +
+            "). הנתונים המקומיים נשמרו. אפשר להמשיך מאוחר יותר."
+        );
+        setSaveIndicator("pending");
+        return;
+      }
+      alert("הנתונים הועברו בהצלחה.");
+      setSaveIndicator("saved");
+      await SyncEngine.pullAll();
+    } catch (e) {
+      console.error(e);
+      alert(
+        "ההעברה נכשלה או נקטעה: " +
+          ((e && e.message) || "") +
+          "\nהנתונים המקומיים לא נמחקו."
+      );
+      setSaveIndicator("error");
+    }
+  }
+
+  async function enterAppSession() {
+    const user = Auth.getUser();
+    if (!user) {
+      showAuthScreen();
+      return;
+    }
+    Storage.setActiveUser(user.id);
+    updateAccountBar(user);
+    SyncEngine.init();
+    SyncEngine.onStatus(applySyncStatus);
+    window.onSyncConflict = function (info) {
+      alert(
+        "נמצאה התנגשות בחדר " +
+          info.roomNumber +
+          " – בדיקה " +
+          info.inspectionNumber +
+          ".\n" +
+          "הגרסה המקומית נשמרה. הגרסה מהשרת נשמרה כעותק בטוח בשם: " +
+          info.copyRoom +
+          ".\nשום הערה לא נמחקה."
+      );
+    };
+
+    const pull = await SyncEngine.pullAll();
+    if (pull && pull.conflicts && pull.conflicts.length) {
+      pull.conflicts.forEach(function (info) {
+        if (typeof window.onSyncConflict === "function") {
+          window.onSyncConflict(info);
+        }
+      });
+    }
+
+    await offerLegacyMigration();
+    renderHome();
+  }
+
+  async function init() {
     $("app-title").textContent = APP_META.name;
     $("footer-copy").textContent = APP_META.copyright;
     bindGlobal();
-    renderHome();
+
+    if (!window.SupabaseApp || !SupabaseApp.isConfigured()) {
+      showAuthScreen();
+      return;
+    }
+
+    try {
+      await Auth.init();
+      if (Auth.isLoggedIn()) {
+        await enterAppSession();
+      } else {
+        showAuthScreen();
+      }
+    } catch (e) {
+      console.error(e);
+      showAuthScreen("לא ניתן להתחבר לשרת כרגע. הנתונים במכשיר לא נמחקו.");
+    }
   }
 
   document.addEventListener("DOMContentLoaded", init);

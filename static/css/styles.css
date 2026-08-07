@@ -162,6 +162,68 @@ img {
   color: var(--ok);
 }
 
+.save-indicator.is-offline,
+.save-indicator.is-pending {
+  background: #f3f1e8;
+  color: #7a5b18;
+}
+
+.save-indicator.is-error {
+  background: var(--bad-bg, #fdecec);
+  color: var(--bad, #b42318);
+}
+
+.header-tools {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: 52%;
+}
+
+.account-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--brand-2);
+}
+
+.account-bar.is-hidden {
+  display: none;
+}
+
+.account-email {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.95;
+}
+
+.btn-text {
+  background: transparent;
+  border: 0;
+  color: var(--brand-2);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  font-size: 0.75rem;
+}
+
+.auth-lead,
+.auth-hint {
+  color: var(--muted);
+  font-size: 0.92rem;
+  margin: 0 0 14px;
+  line-height: 1.45;
+}
+
+.auth-hint:empty {
+  display: none;
+}
+
 .app-main {
   flex: 1;
   padding: 16px 16px 28px;
