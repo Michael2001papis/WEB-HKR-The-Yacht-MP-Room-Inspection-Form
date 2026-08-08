@@ -261,13 +261,14 @@ body.is-auth .app-header {
   display: none;
 }
 
-/* Auth screen — phone / tablet / desktop */
+/* Auth screen — phone / tablet / desktop
+   Important: do NOT set display:flex on the base rule — it overrides
+   .screen { display:none } and leaves login overlapping the app. */
 #screen-auth {
   width: 100%;
   max-width: 440px;
   margin: 0 auto;
   min-height: calc(100dvh - 24px);
-  display: flex;
   align-items: center;
   padding: max(24px, var(--safe-top)) 4px max(28px, var(--safe-bottom));
 }
