@@ -1212,6 +1212,12 @@ body.is-auth .app-footer {
   margin-bottom: 0;
 }
 
+.summary-status-note {
+  margin: 4px 0 2px;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
 .about-hero {
   text-align: center;
   margin: 0 0 14px;

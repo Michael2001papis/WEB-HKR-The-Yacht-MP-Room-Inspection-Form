@@ -355,6 +355,13 @@
           '<button type="button" class="btn btn-primary" data-edit-insp="' +
           insp.inspectionNumber +
           '">עריכה</button>' +
+          '<button type="button" class="btn btn-secondary" data-toggle-status="' +
+          insp.inspectionNumber +
+          '" data-next-status="' +
+          (insp.status === "completed" ? "in_progress" : "completed") +
+          '">' +
+          (insp.status === "completed" ? "החזר לבתהליך" : "סמן כהושלם") +
+          "</button>" +
           '<button type="button" class="btn btn-secondary" data-pdf-insp="' +
           insp.inspectionNumber +
           '">יצירת PDF</button>' +
@@ -379,6 +386,25 @@
     qsa("[data-pdf-insp]", list).forEach(function (btn) {
       btn.onclick = function () {
         openPdfScreen(roomNumber, btn.dataset.pdfInsp);
+      };
+    });
+    qsa("[data-toggle-status]", list).forEach(function (btn) {
+      btn.onclick = function () {
+        const inspNum = btn.dataset.toggleStatus;
+        const next = btn.dataset.nextStatus;
+        const label =
+          next === "completed"
+            ? "לסמן את בדיקה " + inspNum + " כהושלמה?"
+            : "להחזיר את בדיקה " + inspNum + " לסטטוס בתהליך?";
+        if (!confirm(label)) return;
+        if (next === "completed") {
+          Storage.completeInspection(roomNumber, inspNum);
+        } else {
+          Storage.saveInspection(roomNumber, inspNum, {
+            status: "in_progress"
+          });
+        }
+        openRoomDetail(roomNumber);
       };
     });
     qsa("[data-del-insp]", list).forEach(function (btn) {
@@ -1019,26 +1045,67 @@
     }
   }
 
-  function finishAndSave() {
+  function finishAndSave(markCompleted) {
     const missing = Storage.getMissingDefectNotes(current.inspection);
     if (missing.length) {
-      alert("יש ליקויים ללא הסבר. יש להשלים לפני סיום.");
+      alert(
+        markCompleted
+          ? "יש ליקויים ללא הסבר. יש להשלים לפני סימון כהושלם."
+          : "יש ליקויים ללא הסבר. יש להשלים לפני שמירה."
+      );
       return;
     }
+
     const roomNumber = current.roomNumber;
     const inspectionNumber = current.inspectionNumber;
-    current.inspection.status = "completed";
-    Storage.completeInspection(roomNumber, inspectionNumber);
+    const done = !!markCompleted;
+
+    if (done) {
+      if (
+        !confirm(
+          "לסמן את חדר " +
+            roomNumber +
+            " (בדיקה " +
+            inspectionNumber +
+            ") כהושלם?"
+        )
+      ) {
+        return;
+      }
+      current.inspection.status = "completed";
+      Storage.completeInspection(roomNumber, inspectionNumber);
+    } else {
+      current.inspection.status = "in_progress";
+      Storage.saveInspection(roomNumber, inspectionNumber, {
+        status: "in_progress"
+      });
+    }
 
     doneContext = {
       roomNumber: roomNumber,
-      inspectionNumber: inspectionNumber
+      inspectionNumber: inspectionNumber,
+      completed: done
     };
 
     const sub = $("done-sub");
     if (sub) {
-      sub.textContent =
-        "חדר " + roomNumber + " · בדיקה " + inspectionNumber + " — מה תרצו עכשיו?";
+      sub.textContent = done
+        ? "חדר " +
+          roomNumber +
+          " · בדיקה " +
+          inspectionNumber +
+          " סומנה כהושלמה — מה תרצו עכשיו?"
+        : "חדר " +
+          roomNumber +
+          " · בדיקה " +
+          inspectionNumber +
+          " נשמרה (עדיין בתהליך) — מה תרצו עכשיו?";
+    }
+    const title = document.querySelector("#screen-done .done-title");
+    if (title) {
+      title.textContent = done
+        ? "הבדיקה סומנה כהושלמה"
+        : "הבדיקה נשמרה (בתהליך)";
     }
     showScreen("done");
   }
@@ -1643,7 +1710,12 @@
       showScreen("inspection");
       renderChecklist();
     };
-    $("btn-summary-finish").onclick = finishAndSave;
+    $("btn-summary-save-progress").onclick = function () {
+      finishAndSave(false);
+    };
+    $("btn-summary-mark-done").onclick = function () {
+      finishAndSave(true);
+    };
     $("btn-summary-pdf").onclick = function () {
       persistCurrent();
       openPdfScreen(current.roomNumber, current.inspectionNumber);
