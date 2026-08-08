@@ -1,9 +1,12 @@
 # בדיקת חדרים — The Yacht (WEB-HKR)
 
-אפליקציית ווב בעברית (RTL) לבדיקת חדרים במלון The Yacht.  
-מחליפה טפסי נייר: סימון תקין / לא תקין, הערות, שמירה אוטומטית, ויצירת PDF.
+אפליקציית ווב בעברית (RTL) לבדיקת חדרים במלון **The Yacht**.  
+מחליפה טפסי נייר: סימון תקין / לא תקין, הערות, שמירה אוטומטית, סנכרון בענן ויצירת PDF.
 
-**אתר חי (Vercel):** https://web-hkr-the-yacht-mp-room-inspectio.vercel.app
+| | |
+|---|---|
+| **אתר חי (Vercel)** | https://web-hkr-the-yacht-mp-room-inspectio.vercel.app |
+| **GitHub** | https://github.com/Michael2001papis/WEB-HKR-The-Yacht-MP-Room-Inspection-Form |
 
 ---
 
@@ -14,10 +17,22 @@
 - חדרים שמורים + חיפוש לפי מספר חדר
 - סימון לפי פריט / קטגוריה / כל החדר תקין
 - הערות לפריטים + הערות כלליות
-- שמירה אוטומטית
+- שמירה אוטומטית (offline-first)
 - PDF לחדר בודד + גיבוי מלא ל־PDF
 - התחברות עם שם משתמש מוצג (למשל **MP2001**) דרך Supabase Auth
-- סנכרון בענן (Supabase Free) עם רשת ביטחון מקומית (offline-first)
+- סנכרון בענן (Supabase Free) עם רשת ביטחון מקומית
+
+---
+
+## טכנולוגיה
+
+| שכבה | פרטים |
+|------|--------|
+| Frontend | HTML + JavaScript סטטי (ללא build) |
+| עיצוב | CSS מותאם, RTL, עברית |
+| Auth / DB | Supabase Free (Auth + Postgres + RLS) |
+| PDF | html2pdf.js (בדפדפן) |
+| Hosting | Vercel |
 
 ---
 
@@ -64,7 +79,7 @@ global.SUPABASE_CONFIG = {
 ## מבנה הפרויקט
 
 ```
-index.html                 # ממשק האפליקציה
+index.html                 # ממשק האפליקציה (כל המסכים)
 static/
   css/styles.css
   js/
@@ -80,17 +95,23 @@ static/
   assets/
 supabase/schema.sql        # טבלת inspections + RLS
 SUPABASE_SETUP.md
+README.md
 ```
 
 ---
 
 ## הרצה מקומית
 
-אפליקציה סטטית — אין צורך ב־build.
+אפליקציה סטטית — אין צורך ב־`npm install` או build.
 
-מומלץ לשרת מקומי ב־HTTPS/localhost (למשל Live Server / `npx serve`), כי Auth של Supabase דורש origin תקין.
+```bash
+git clone https://github.com/Michael2001papis/WEB-HKR-The-Yacht-MP-Room-Inspection-Form.git
+cd WEB-HKR-The-Yacht-MP-Room-Inspection-Form
+```
 
-1. מלאו את `supabase-config.js`
+מומלץ לשרת מקומי (Live Server / `npx serve`) — Auth של Supabase עובד טוב יותר מ־`localhost` מאשר מ־`file://`.
+
+1. מלאו את `static/js/supabase-config.js`
 2. פתחו את האתר בדפדפן
 3. התחברו כ־`MP2001`
 
@@ -117,7 +138,7 @@ SUPABASE_SETUP.md
 
 ## הערות חשובות
 
-- רשימת הריג'קטים בקובץ `checklist-data.js` — אין לשנות ניסוח בלי אישור מפורש
+- רשימת הריג'קטים ב־`checklist-data.js` — אין לשנות ניסוח בלי אישור מפורש
 - PDF נוצר בדפדפן ונשמר במכשיר; בשלב זה אין העלאת PDF ל־Supabase Storage
 - פרויקט Free של Supabase עשוי להיכנס ל־Pause אחרי כשבוע ללא פעילות — הנתונים המקומיים לא נמחקים במקרה כזה
 
