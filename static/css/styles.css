@@ -300,7 +300,7 @@ body.is-auth .app-header {
   max-width: min(220px, 70vw);
   margin: 0 auto 14px;
   border-radius: 12px;
-  background: #000;
+  background: #2a343a;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
   animation: logoPulse 2.8s ease-in-out infinite;
 }
@@ -380,7 +380,59 @@ body.is-auth .app-header {
 
 @media (min-width: 1024px) {
   #screen-auth {
-    max-width: 460px;
+    max-width: 960px;
+    min-height: calc(100dvh - 48px);
+    padding: 40px 24px;
+  }
+
+  .auth-shell {
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 36px;
+    align-items: center;
+    padding: 36px 40px;
+    border-radius: 28px;
+    background: rgba(7, 24, 32, 0.52);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 28px 64px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(16px) saturate(1.1);
+    -webkit-backdrop-filter: blur(16px) saturate(1.1);
+  }
+
+  .auth-brand-block {
+    text-align: right;
+    margin-bottom: 0;
+    padding: 8px 4px;
+  }
+
+  .auth-hero-logo {
+    margin: 0 0 18px;
+    height: 72px;
+    max-width: 260px;
+    border-radius: 14px;
+  }
+
+  .auth-eyebrow {
+    font-size: 0.84rem;
+  }
+
+  .auth-title {
+    text-align: right;
+    font-size: 2.1rem !important;
+    margin-bottom: 10px !important;
+  }
+
+  .auth-lead {
+    text-align: right;
+    font-size: 1.05rem;
+    max-width: 34ch;
+    margin-right: 0;
+    margin-left: auto;
+  }
+
+  .auth-card {
+    padding: 28px 26px;
+    border-radius: 22px;
   }
 }
 
@@ -1658,19 +1710,312 @@ body.is-auth .app-footer {
 
 @media (min-width: 960px) {
   #app {
-    max-width: 980px;
+    max-width: 1080px;
   }
 
   :root {
-    --max: 980px;
+    --max: 1080px;
   }
 
   .app-main {
-    padding: 22px 22px 36px;
+    padding: 24px 28px 40px;
   }
 
   .home-grid {
     gap: 14px;
+  }
+}
+
+/* ---------- Desktop workstation (≥1100px) ---------- */
+@media (min-width: 1100px) {
+  :root {
+    --max: 1220px;
+    --radius: 20px;
+  }
+
+  html {
+    background-attachment: fixed;
+    background-image:
+      linear-gradient(115deg, rgba(7, 24, 32, 0.55) 0%, rgba(8, 28, 36, 0.18) 42%, rgba(8, 28, 36, 0.42) 100%),
+      url("../IMG/CCOG.jpg");
+    background-position: center;
+  }
+
+  body.is-app {
+    padding: 22px 20px 28px;
+  }
+
+  body.is-app #app {
+    max-width: var(--max);
+    min-height: calc(100dvh - 50px);
+    margin: 0 auto;
+    border-radius: 28px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(245, 248, 250, 0.84) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    box-shadow:
+      0 30px 70px rgba(0, 0, 0, 0.34),
+      0 2px 0 rgba(255, 255, 255, 0.35) inset;
+    backdrop-filter: blur(18px) saturate(1.12);
+    -webkit-backdrop-filter: blur(18px) saturate(1.12);
+  }
+
+  body.is-app .app-header {
+    padding: 16px 30px 16px;
+    border-radius: 28px 28px 0 0;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 10px 24px rgba(8, 36, 46, 0.08);
+  }
+
+  body.is-app .brand-logo {
+    height: 52px;
+    max-width: 168px;
+    border-radius: 10px;
+  }
+
+  body.is-app .brand-name {
+    font-size: 1.12rem;
+  }
+
+  body.is-app .brand-tag {
+    font-size: 0.86rem;
+  }
+
+  body.is-app .app-main {
+    padding: 28px 34px 44px;
+  }
+
+  body.is-app .app-footer {
+    color: var(--muted);
+    text-shadow: none;
+    padding: 16px 30px 22px;
+    border-top: 1px solid rgba(208, 221, 227, 0.8);
+    background: rgba(255, 255, 255, 0.55);
+    border-radius: 0 0 28px 28px;
+  }
+
+  body.is-app .screen-title {
+    font-size: 1.85rem;
+    color: var(--brand);
+    text-shadow: none;
+  }
+
+  body.is-app .home-kicker,
+  body.is-app .home-sub,
+  body.is-app .home-section-title,
+  body.is-app .weekly-lead,
+  body.is-app .back-link {
+    text-shadow: none;
+  }
+
+  body.is-app .home-kicker {
+    color: var(--brand-2);
+  }
+
+  body.is-app .home-sub,
+  body.is-app .weekly-lead {
+    color: var(--muted);
+  }
+
+  body.is-app .home-section-title {
+    color: var(--brand);
+    font-size: 0.9rem;
+    letter-spacing: 0.06em;
+  }
+
+  body.is-app .back-link {
+    color: var(--brand-2);
+  }
+
+  body.is-app .section-subtitle {
+    color: var(--brand);
+  }
+
+  /* Home as desktop dashboard */
+  #screen-home.is-active {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    column-gap: 22px;
+    row-gap: 6px;
+    align-items: start;
+  }
+
+  #screen-home .continue-banner,
+  #screen-home .home-hero {
+    grid-column: 1 / -1;
+  }
+
+  #screen-home .home-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 10px 24px;
+    margin-bottom: 10px;
+    padding: 18px 22px;
+    border-radius: 20px;
+    background:
+      linear-gradient(120deg, rgba(11, 58, 74, 0.96), rgba(26, 107, 124, 0.9) 58%, rgba(200, 164, 90, 0.35));
+    color: #fff;
+    box-shadow: var(--shadow-soft);
+  }
+
+  #screen-home .home-kicker {
+    color: rgba(255, 255, 255, 0.82);
+    width: 100%;
+  }
+
+  #screen-home .home-title {
+    margin: 0;
+    color: #fff !important;
+    font-size: 2rem;
+  }
+
+  #screen-home .home-sub {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.9);
+    max-width: 42ch;
+  }
+
+  #screen-home .home-section {
+    margin-bottom: 14px;
+  }
+
+  #screen-home .home-section:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .home-grid-primary .home-tile-primary {
+    min-height: 168px;
+    padding: 24px 22px;
+  }
+
+  .home-grid-primary .home-tile-primary .tile-title {
+    font-size: 1.35rem;
+  }
+
+  .home-grid-primary .home-tile-primary .tile-desc {
+    font-size: 0.98rem;
+  }
+
+  .home-tile {
+    min-height: 128px;
+    padding: 20px 18px;
+  }
+
+  .home-tile:hover {
+    transform: translateY(-3px);
+  }
+
+  .home-grid-tools {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .home-grid-secondary {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* Forms / lists use the width */
+  .form-card,
+  .summary-card,
+  .about-card,
+  .detail-card,
+  .weekly-card,
+  .list-card {
+    box-shadow: 0 8px 22px rgba(8, 36, 46, 0.08);
+  }
+
+  .form-card,
+  .summary-card {
+    padding: 22px 24px;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .category-card {
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .category-card:hover {
+    border-color: rgba(200, 164, 90, 0.4);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .sticky-actions {
+    padding-left: max(34px, calc((100vw - var(--max)) / 2 + 34px));
+    padding-right: max(34px, calc((100vw - var(--max)) / 2 + 34px));
+  }
+
+  .sticky-actions .btn {
+    max-width: 420px;
+  }
+
+  .done-card {
+    max-width: 520px;
+    padding: 28px 26px;
+  }
+
+  .weekly-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .weekly-filters {
+    gap: 10px;
+  }
+
+  .chip {
+    min-height: 42px;
+    padding: 8px 14px;
+  }
+
+  .about-hero {
+    padding: 28px 24px 24px;
+  }
+
+  .about-product {
+    font-size: 1.7rem;
+  }
+
+  /* Auth stays cinematic over the photo, not inside the glass shell */
+  body.is-auth {
+    padding: 0;
+  }
+
+  body.is-auth #app {
+    max-width: 1100px;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    min-height: 100dvh;
+  }
+
+  body.is-auth .app-footer {
+    color: rgba(255, 255, 255, 0.88);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+    background: transparent;
+    border: 0;
+  }
+}
+
+@media (min-width: 1400px) {
+  :root {
+    --max: 1320px;
+  }
+
+  body.is-app {
+    padding: 28px 28px 36px;
+  }
+
+  body.is-app .app-main {
+    padding: 32px 40px 48px;
+  }
+
+  #screen-home.is-active {
+    grid-template-columns: 1.2fr 0.8fr;
+    column-gap: 28px;
   }
 }
 
