@@ -1,21 +1,25 @@
 /**
- * Local cache for room inspections (offline-first).
+ * App storage layer — in-memory workspace + IndexedDB (YachtDB) primary.
+ * localStorage kept as mirror/fallback for older browsers / emergency recovery.
  * Legacy key yacht-room-inspections-v1 is never deleted by this layer.
- * Per-user cloud cache is used after login; Supabase is the primary store.
  */
 (function (global) {
   const LEGACY_KEY = "yacht-room-inspections-v1";
   const CACHE_PREFIX = "yacht-cloud-cache-v1:";
 
   let activeUserId = null;
+  let memoryStore = null;
   let changeListeners = [];
+  let persistTimer = null;
+  let dbReady = false;
 
   function emptyStore() {
     return {
       rooms: {},
       lastActive: null,
-      version: 2,
-      userId: activeUserId || null
+      version: 3,
+      userId: activeUserId || null,
+      engine: "yacht-db-indexeddb"
     };
   }
 
@@ -24,28 +28,58 @@
     return CACHE_PREFIX + activeUserId;
   }
 
-  function load() {
+  function readLocalMirror() {
     const key = cacheKey();
-    if (!key) return emptyStore();
+    if (!key) return null;
     try {
       const raw = localStorage.getItem(key);
-      if (!raw) return emptyStore();
+      if (!raw) return null;
       const data = JSON.parse(raw);
-      if (!data || typeof data !== "object") return emptyStore();
+      if (!data || typeof data !== "object") return null;
       if (!data.rooms) data.rooms = {};
       return data;
     } catch (e) {
-      console.error("Failed to load store", e);
-      return emptyStore();
+      console.error("Failed to read local mirror", e);
+      return null;
     }
   }
 
-  function save(data) {
+  function writeLocalMirror(data) {
     const key = cacheKey();
-    if (!key) return;
+    if (!key || !data) return;
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+      console.error("Failed to write local mirror", e);
+    }
+  }
+
+  function load() {
+    if (!activeUserId) return emptyStore();
+    if (!memoryStore) memoryStore = emptyStore();
+    if (!memoryStore.rooms) memoryStore.rooms = {};
+    return memoryStore;
+  }
+
+  function schedulePersist(data) {
+    if (!activeUserId) return;
+    writeLocalMirror(data);
+    if (!global.YachtDB || !YachtDB.isSupported) return;
+    clearTimeout(persistTimer);
+    persistTimer = setTimeout(function () {
+      YachtDB.saveWorkspace(activeUserId, data).catch(function (err) {
+        console.error("YachtDB save failed", err);
+      });
+    }, 40);
+  }
+
+  function save(data) {
+    if (!activeUserId) return;
     data.userId = activeUserId;
-    data.version = 2;
-    localStorage.setItem(key, JSON.stringify(data));
+    data.version = 3;
+    data.engine = "yacht-db-indexeddb";
+    memoryStore = data;
+    schedulePersist(data);
   }
 
   function notifyChange(detail) {
@@ -159,12 +193,8 @@
       const meta = global.findItemMeta(key);
       if (!meta) continue;
 
-      if (meta.item.optionalExists && row.exists === false) {
-        continue;
-      }
-      if (meta.item.optionalExists && row.exists !== true) {
-        continue;
-      }
+      if (meta.item.optionalExists && row.exists === false) continue;
+      if (meta.item.optionalExists && row.exists !== true) continue;
 
       if (row.status === "ok") {
         checked++;
@@ -222,8 +252,78 @@
       changeListeners.push(fn);
     },
 
+    async initDb() {
+      if (!global.YachtDB || !YachtDB.isSupported) {
+        dbReady = false;
+        return { ok: false, engine: "localStorage-only" };
+      }
+      try {
+        await YachtDB.open();
+        dbReady = true;
+        return { ok: true, engine: "indexeddb", name: YachtDB.name };
+      } catch (e) {
+        console.error(e);
+        dbReady = false;
+        return { ok: false, engine: "localStorage-only", error: e };
+      }
+    },
+
+    isDbReady() {
+      return dbReady;
+    },
+
+    async activateUser(userId) {
+      activeUserId = userId ? String(userId) : null;
+      memoryStore = null;
+      if (!activeUserId) return null;
+
+      let data = null;
+      if (global.YachtDB && YachtDB.isSupported) {
+        try {
+          if (!dbReady) await this.initDb();
+          data = await YachtDB.loadWorkspace(activeUserId);
+        } catch (e) {
+          console.error("YachtDB load failed", e);
+        }
+      }
+
+      if (!data || !data.rooms) {
+        data = readLocalMirror();
+      }
+
+      if (!data || !Object.keys(data.rooms || {}).length) {
+        try {
+          const raw = localStorage.getItem(LEGACY_KEY);
+          if (raw) {
+            const legacy = JSON.parse(raw);
+            if (legacy && legacy.rooms && Object.keys(legacy.rooms).length) {
+              data = {
+                rooms: legacy.rooms,
+                lastActive: legacy.lastActive || null,
+                version: 3,
+                userId: activeUserId,
+                migratedFrom: LEGACY_KEY
+              };
+            }
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      if (!data || typeof data !== "object") data = emptyStore();
+      if (!data.rooms) data.rooms = {};
+      data.userId = activeUserId;
+      data.version = 3;
+      data.engine = dbReady ? "yacht-db-indexeddb" : "localStorage";
+      memoryStore = data;
+      schedulePersist(data);
+      return data;
+    },
+
     setActiveUser(userId) {
       activeUserId = userId ? String(userId) : null;
+      if (!activeUserId) memoryStore = null;
     },
 
     getActiveUser() {
@@ -234,6 +334,7 @@
       if (!activeUserId) return;
       const next = data && typeof data === "object" ? data : emptyStore();
       if (!next.rooms) next.rooms = {};
+      next.userId = activeUserId;
       save(next);
       notifyChange({ type: "replace" });
     },
@@ -296,13 +397,17 @@
     listRooms() {
       const store = load();
       return Object.keys(store.rooms)
-        .map((num) => {
+        .map(function (num) {
           const room = store.rooms[num];
           const inspections = Object.keys(room.inspections)
-            .map((n) => room.inspections[n])
-            .sort((a, b) => a.inspectionNumber - b.inspectionNumber);
+            .map(function (n) {
+              return room.inspections[n];
+            })
+            .sort(function (a, b) {
+              return a.inspectionNumber - b.inspectionNumber;
+            });
           const latest =
-            inspections.slice().sort((a, b) => {
+            inspections.slice().sort(function (a, b) {
               return (b.updatedAt || "").localeCompare(a.updatedAt || "");
             })[0] || null;
           const stats = latest ? getInspectionStats(latest) : { defects: 0 };
@@ -317,7 +422,7 @@
             inspections: inspections
           };
         })
-        .sort((a, b) => {
+        .sort(function (a, b) {
           return (b.updatedAt || "").localeCompare(a.updatedAt || "");
         });
     },
@@ -375,7 +480,7 @@
         inspectionNumber: num,
         inspection: inspection
       });
-      return { room, inspection };
+      return { room: room, inspection: inspection };
     },
 
     saveInspection(roomNumber, inspectionNumber, patch) {
@@ -478,12 +583,7 @@
         return { conflict: true, local: existing, remote: row };
       }
 
-      if (
-        existing &&
-        existing.dirty &&
-        existing.id === row.id &&
-        !options.forceRemote
-      ) {
+      if (existing && existing.dirty && existing.id === row.id && !options.forceRemote) {
         return { conflict: false, skipped: true, inspection: existing };
       }
 
@@ -601,9 +701,9 @@
           }
         }
       }
-      return list.sort((a, b) =>
-        (b.inspection.updatedAt || "").localeCompare(a.inspection.updatedAt || "")
-      );
+      return list.sort(function (a, b) {
+        return (b.inspection.updatedAt || "").localeCompare(a.inspection.updatedAt || "");
+      });
     },
 
     listDirtyInspections() {

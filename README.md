@@ -30,7 +30,7 @@
 | Frontend | HTML + JavaScript סטטי (ללא build) |
 | עיצוב | CSS מותאם, RTL, עברית |
 | Auth | התחברות מקומית (`MP2001`) + סנכרון ענן אופציונלי |
-| שמירה | localStorage + Supabase (אם הוגדר) |
+| שמירה | **IndexedDB פנימי** (YachtDB) + מראת localStorage |
 | PDF | html2pdf.js (בדפדפן) |
 | Hosting | Vercel |
 
@@ -63,7 +63,8 @@ static/
   css/styles.css
   js/
     checklist-data.js      # רשימת ריג'קטים + APP_META
-    storage.js             # שמירה מקומית לפי משתמש
+    db.js                  # מסד נתונים פנימי IndexedDB (YachtDB)
+    storage.js             # שכבת שמירה (זיכרון + DB + מראה)
     sync.js                # שכבת סנכרון (לא פעילה בלי Supabase)
     auth.js                # התחברות מקומית MP2001
     supabase-config.js     # ריק / מכובה

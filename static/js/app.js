@@ -1344,15 +1344,15 @@
   }
 
   /** If cloud user cache is empty, copy from previous local-only cache. */
-  function adoptLocalCacheToCloudUser(cloudUserId) {
+  async function adoptLocalCacheToCloudUser(cloudUserId) {
     if (!cloudUserId || cloudUserId === Auth.LOCAL_USER_ID) return;
-    Storage.setActiveUser(cloudUserId);
+    await Storage.activateUser(cloudUserId);
     const cloudStore = Storage.getAll();
     if (Object.keys((cloudStore && cloudStore.rooms) || {}).length) return;
 
-    Storage.setActiveUser(Auth.LOCAL_USER_ID);
+    await Storage.activateUser(Auth.LOCAL_USER_ID);
     const localStore = Storage.getAll();
-    Storage.setActiveUser(cloudUserId);
+    await Storage.activateUser(cloudUserId);
     if (!Object.keys((localStore && localStore.rooms) || {}).length) return;
     Storage.replaceStore(localStore);
   }
@@ -1391,9 +1391,9 @@
     }
 
     if (Auth.isCloudConnected && Auth.isCloudConnected()) {
-      adoptLocalCacheToCloudUser(user.id);
+      await adoptLocalCacheToCloudUser(user.id);
     } else {
-      Storage.setActiveUser(user.id);
+      await Storage.activateUser(user.id);
       adoptLegacyLocalDataIfNeeded();
     }
 
@@ -1488,6 +1488,7 @@
     Auth.onIdleTimeout(handleIdleTimeout);
 
     try {
+      await Storage.initDb();
       await Auth.init();
       if (Auth.isLoggedIn()) {
         await enterAppSession();
