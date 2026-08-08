@@ -1125,7 +1125,350 @@
     }
   }
 
-  /* ---------- About ---------- */
+  /* ---------- Weekly agenda ---------- */
+  let weeklyWeekOffset = 0; // 0 = current week (Sun–Sat)
+  let weeklyFilter = "room-asc";
+  let weeklyExpanded = {};
+
+  function pad2(n) {
+    return String(n).padStart(2, "0");
+  }
+
+  function toISODate(d) {
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+  }
+
+  /** Week starts Sunday (א׳) ends Saturday (ש׳). */
+  function getWeekBounds(offsetWeeks) {
+    const now = new Date();
+    const day = now.getDay(); // 0 Sun
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day);
+    start.setDate(start.getDate() + offsetWeeks * 7);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return {
+      start: start,
+      end: end,
+      startISO: toISODate(start),
+      endISO: toISODate(end)
+    };
+  }
+
+  function formatShortDate(iso) {
+    if (!iso) return "—";
+    const parts = String(iso).split("-");
+    if (parts.length !== 3) return iso;
+    return parts[2] + "/" + parts[1];
+  }
+
+  function compareRoomNumbers(a, b) {
+    const na = Number(a);
+    const nb = Number(b);
+    const aNum = !isNaN(na) && String(na) === String(a).trim();
+    const bNum = !isNaN(nb) && String(nb) === String(b).trim();
+    if (aNum && bNum) return na - nb;
+    return String(a).localeCompare(String(b), "he", { numeric: true });
+  }
+
+  function collectWeeklyRows(weekOffset) {
+    const bounds = getWeekBounds(weekOffset);
+    const store = Storage.getAll();
+    const rows = [];
+    Object.keys(store.rooms || {}).forEach(function (rk) {
+      const room = store.rooms[rk];
+      Object.keys(room.inspections || {}).forEach(function (ik) {
+        const insp = room.inspections[ik];
+        if (!insp) return;
+        const date = insp.date || "";
+        if (date < bounds.startISO || date > bounds.endISO) return;
+        const stats = Storage.getStats(insp);
+        const blocking = stats.defects > 0;
+        rows.push({
+          roomNumber: room.roomNumber,
+          inspection: insp,
+          stats: stats,
+          blocking: blocking,
+          key: room.roomNumber + "::" + insp.inspectionNumber
+        });
+      });
+    });
+    return { bounds: bounds, rows: rows };
+  }
+
+  function applyWeeklyFilter(rows, filter, searchQ) {
+    let list = rows.slice();
+    const q = String(searchQ || "").trim();
+    if (q) {
+      list = list.filter(function (r) {
+        return String(r.roomNumber).indexOf(q) !== -1;
+      });
+    }
+
+    if (filter === "completed") {
+      list = list.filter(function (r) {
+        return r.inspection.status === "completed";
+      });
+    } else if (filter === "in_progress") {
+      list = list.filter(function (r) {
+        return r.inspection.status === "in_progress";
+      });
+    } else if (filter === "defects" || filter === "blocking") {
+      list = list.filter(function (r) {
+        return r.stats.defects > 0;
+      });
+    }
+
+    if (filter === "date-desc") {
+      list.sort(function (a, b) {
+        const d = String(b.inspection.date || "").localeCompare(String(a.inspection.date || ""));
+        if (d) return d;
+        return compareRoomNumbers(a.roomNumber, b.roomNumber);
+      });
+    } else if (filter === "date-asc") {
+      list.sort(function (a, b) {
+        const d = String(a.inspection.date || "").localeCompare(String(b.inspection.date || ""));
+        if (d) return d;
+        return compareRoomNumbers(a.roomNumber, b.roomNumber);
+      });
+    } else {
+      // room-asc / all / status filters default to room ascending
+      list.sort(function (a, b) {
+        const c = compareRoomNumbers(a.roomNumber, b.roomNumber);
+        if (c) return c;
+        return a.inspection.inspectionNumber - b.inspection.inspectionNumber;
+      });
+    }
+    return list;
+  }
+
+  function openWeekly() {
+    showScreen("weekly");
+    renderWeekly();
+  }
+
+  function renderWeekly() {
+    const pack = collectWeeklyRows(weeklyWeekOffset);
+    const bounds = pack.bounds;
+    const searchEl = $("weekly-search");
+    const searchQ = searchEl ? searchEl.value : "";
+    const list = applyWeeklyFilter(pack.rows, weeklyFilter, searchQ);
+
+    const title = $("weekly-week-title");
+    const range = $("weekly-week-range");
+    if (title) {
+      title.textContent =
+        weeklyWeekOffset === 0
+          ? "השבוע הנוכחי"
+          : weeklyWeekOffset < 0
+            ? "לפני " + Math.abs(weeklyWeekOffset) + " שבועות"
+            : "בעוד " + weeklyWeekOffset + " שבועות";
+    }
+    if (range) {
+      range.textContent =
+        formatShortDate(bounds.startISO) +
+        " – " +
+        formatShortDate(bounds.endISO) +
+        " (א׳–ש׳)";
+    }
+
+    qsa("[data-weekly-filter]").forEach(function (btn) {
+      btn.classList.toggle("is-active", btn.dataset.weeklyFilter === weeklyFilter);
+    });
+
+    // Stats from full week (before search), but respect status-ish filters for meeting focus
+    const forStats =
+      weeklyFilter === "all" ||
+      weeklyFilter === "room-asc" ||
+      weeklyFilter === "date-asc" ||
+      weeklyFilter === "date-desc"
+        ? pack.rows
+        : applyWeeklyFilter(pack.rows, weeklyFilter, "");
+
+    const roomSet = {};
+    let completed = 0;
+    let inProgress = 0;
+    let withDefects = 0;
+    let defectTotal = 0;
+    let blockingRooms = {};
+    forStats.forEach(function (r) {
+      roomSet[r.roomNumber] = true;
+      if (r.inspection.status === "completed") completed++;
+      if (r.inspection.status === "in_progress") inProgress++;
+      if (r.stats.defects > 0) {
+        withDefects++;
+        defectTotal += r.stats.defects;
+        blockingRooms[r.roomNumber] = true;
+      }
+    });
+
+    const statsEl = $("weekly-stats");
+    if (statsEl) {
+      statsEl.innerHTML =
+        '<div class="weekly-stat"><span class="muted">חדרים</span><strong>' +
+        Object.keys(roomSet).length +
+        "</strong></div>" +
+        '<div class="weekly-stat"><span class="muted">בדיקות</span><strong>' +
+        forStats.length +
+        "</strong></div>" +
+        '<div class="weekly-stat"><span class="muted">הושלמו</span><strong>' +
+        completed +
+        "</strong></div>" +
+        '<div class="weekly-stat"><span class="muted">בתהליך</span><strong>' +
+        inProgress +
+        "</strong></div>" +
+        '<div class="weekly-stat weekly-stat-warn"><span class="muted">עם ליקויים</span><strong>' +
+        withDefects +
+        "</strong></div>" +
+        '<div class="weekly-stat weekly-stat-warn"><span class="muted">סה״כ ליקויים</span><strong>' +
+        defectTotal +
+        "</strong></div>" +
+        '<div class="weekly-stat weekly-stat-bad"><span class="muted">מונע איכלוס</span><strong>' +
+        Object.keys(blockingRooms).length +
+        " חדרים</strong></div>";
+    }
+
+    const box = $("weekly-list");
+    if (!box) return;
+    if (!list.length) {
+      box.innerHTML =
+        '<div class="empty-state">אין בדיקות בשבוע זה לפי הסינון הנוכחי.</div>';
+      return;
+    }
+
+    box.innerHTML = list
+      .map(function (r) {
+        const statusLabel =
+          r.inspection.status === "completed" ? "הושלמה" : "בתהליך";
+        const open = !!weeklyExpanded[r.key];
+        const defectsHtml =
+          r.stats.defectList && r.stats.defectList.length
+            ? '<ul class="weekly-defect-list">' +
+              r.stats.defectList
+                .map(function (d) {
+                  return (
+                    "<li><strong>" +
+                    escapeHtml(d.itemName) +
+                    "</strong> <span class=\"muted\">(" +
+                    escapeHtml(d.categoryName) +
+                    ")</span>" +
+                    (d.note
+                      ? "<div class=\"weekly-defect-note\">" +
+                        escapeHtml(d.note) +
+                        "</div>"
+                      : "") +
+                    "</li>"
+                  );
+                })
+                .join("") +
+              "</ul>"
+            : '<p class="muted">אין ליקויים.</p>';
+
+        return (
+          '<article class="weekly-card' +
+          (r.blocking ? " is-blocking" : "") +
+          '">' +
+          '<div class="weekly-card-top">' +
+          "<div>" +
+          '<div class="weekly-card-title">חדר ' +
+          escapeHtml(r.roomNumber) +
+          "</div>" +
+          '<div class="list-card-meta">' +
+          Storage.formatDisplayDate(r.inspection.date) +
+          " · בדיקה " +
+          r.inspection.inspectionNumber +
+          "</div></div>" +
+          '<div class="weekly-card-badges">' +
+          '<span class="status-pill status-' +
+          r.inspection.status +
+          '">' +
+          statusLabel +
+          "</span>" +
+          (r.blocking
+            ? '<span class="status-pill status-blocking">מונע איכלוס</span>'
+            : "") +
+          '<span class="status-pill">' +
+          r.stats.defects +
+          " ליקויים</span>" +
+          "</div></div>" +
+          '<div class="btn-row weekly-card-actions">' +
+          '<button type="button" class="btn btn-secondary" data-weekly-open="' +
+          escapeHtml(r.roomNumber) +
+          '" data-weekly-insp="' +
+          r.inspection.inspectionNumber +
+          '">פתיחה</button>' +
+          '<button type="button" class="btn btn-secondary" data-weekly-pdf-room="' +
+          escapeHtml(r.roomNumber) +
+          '" data-weekly-insp="' +
+          r.inspection.inspectionNumber +
+          '">PDF</button>' +
+          '<button type="button" class="btn btn-secondary" data-weekly-toggle="' +
+          escapeHtml(r.key) +
+          '">' +
+          (open ? "הסתר ליקויים" : "פירוט ליקויים") +
+          "</button>" +
+          "</div>" +
+          (open
+            ? '<div class="weekly-card-details">' +
+              (r.blocking
+                ? '<p class="weekly-blocking-note">ליקויים אלה מונעים איכלוס החדר עד לטיפול.</p>'
+                : "") +
+              defectsHtml +
+              "</div>"
+            : "") +
+          "</article>"
+        );
+      })
+      .join("");
+
+    qsa("[data-weekly-open]", box).forEach(function (btn) {
+      btn.onclick = function () {
+        openInspectionSummary(btn.dataset.weeklyOpen, btn.dataset.weeklyInsp);
+      };
+    });
+    qsa("[data-weekly-pdf-room]", box).forEach(function (btn) {
+      btn.onclick = function () {
+        openPdfScreen(btn.dataset.weeklyPdfRoom, btn.dataset.weeklyInsp);
+      };
+    });
+    qsa("[data-weekly-toggle]", box).forEach(function (btn) {
+      btn.onclick = function () {
+        const key = btn.dataset.weeklyToggle;
+        weeklyExpanded[key] = !weeklyExpanded[key];
+        renderWeekly();
+      };
+    });
+  }
+
+  function exportWeeklyPdf() {
+    const pack = collectWeeklyRows(weeklyWeekOffset);
+    const searchEl = $("weekly-search");
+    const rows = applyWeeklyFilter(
+      pack.rows,
+      weeklyFilter,
+      searchEl ? searchEl.value : ""
+    );
+
+    if (!rows.length) {
+      alert("אין נתונים לייצוא לפי הסינון הנוכחי.");
+      return;
+    }
+
+    setSaveIndicator("saving", "יוצר סיכום שבועי…");
+    PdfService.downloadWeeklySummary({
+      bounds: pack.bounds,
+      rows: rows,
+      filter: weeklyFilter
+    })
+      .then(function () {
+        setSaveIndicator("saved", "הסיכום נשמר");
+      })
+      .catch(function (err) {
+        console.error(err);
+        setSaveIndicator("idle");
+        alert((err && err.message) || "יצירת הסיכום נכשלה");
+      });
+  }
+
   function openAbout() {
     showScreen("about");
   }
@@ -1142,6 +1485,7 @@
     $("nav-saved").onclick = openSavedRooms;
     $("nav-search").onclick = openSearch;
     $("nav-pdf").onclick = openPdfPicker;
+    $("nav-weekly").onclick = openWeekly;
     $("nav-full-pdf-backup").onclick = function () {
       const store = Storage.getAll();
       const roomCount = Object.keys(store.rooms || {}).length;
@@ -1178,6 +1522,39 @@
         });
     };
     $("nav-about").onclick = openAbout;
+
+    if ($("btn-week-prev")) {
+      $("btn-week-prev").onclick = function () {
+        weeklyWeekOffset -= 1;
+        renderWeekly();
+      };
+    }
+    if ($("btn-week-next")) {
+      $("btn-week-next").onclick = function () {
+        weeklyWeekOffset += 1;
+        renderWeekly();
+      };
+    }
+    if ($("btn-week-today")) {
+      $("btn-week-today").onclick = function () {
+        weeklyWeekOffset = 0;
+        renderWeekly();
+      };
+    }
+    qsa("[data-weekly-filter]").forEach(function (btn) {
+      btn.onclick = function () {
+        weeklyFilter = btn.dataset.weeklyFilter;
+        renderWeekly();
+      };
+    });
+    if ($("weekly-search")) {
+      $("weekly-search").addEventListener("input", function () {
+        renderWeekly();
+      });
+    }
+    if ($("btn-weekly-pdf")) {
+      $("btn-weekly-pdf").onclick = exportWeeklyPdf;
+    }
 
     $("form-auth").onsubmit = function (e) {
       if (e && e.preventDefault) e.preventDefault();

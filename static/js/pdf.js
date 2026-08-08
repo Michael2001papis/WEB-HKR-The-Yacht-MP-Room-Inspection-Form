@@ -559,6 +559,147 @@
         rooms: roomNums.length,
         inspections: inspectionCount
       };
+    },
+
+    /**
+     * Management meeting weekly summary PDF.
+     * options: { bounds: {startISO,endISO}, rows: [{roomNumber,inspection,stats,blocking}] }
+     */
+    async downloadWeeklySummary(options) {
+      if (typeof html2pdf === "undefined") {
+        throw new Error("ספריית PDF לא נטענה");
+      }
+      const opts = options || {};
+      const bounds = opts.bounds || {};
+      const rows = opts.rows || [];
+      if (!rows.length) throw new Error("אין נתונים לסיכום שבועי");
+
+      function pad2(n) {
+        return String(n).padStart(2, "0");
+      }
+      function esc(s) {
+        return String(s == null ? "" : s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+      function fmtDate(iso) {
+        if (!iso) return "—";
+        const p = String(iso).split("-");
+        if (p.length !== 3) return esc(iso);
+        return p[2] + "/" + p[1] + "/" + p[0];
+      }
+
+      const now = new Date();
+      const stamp =
+        pad2(now.getDate()) +
+        "-" +
+        pad2(now.getMonth() + 1) +
+        "-" +
+        now.getFullYear();
+      const filename = "WEB-HKR-Weekly-Summary-" + stamp + ".pdf";
+
+      let defectTotal = 0;
+      let blocking = 0;
+      let completed = 0;
+      rows.forEach(function (r) {
+        defectTotal += r.stats.defects || 0;
+        if (r.blocking) blocking++;
+        if (r.inspection.status === "completed") completed++;
+      });
+
+      let body = "";
+      rows.forEach(function (r) {
+        const defects =
+          r.stats.defectList && r.stats.defectList.length
+            ? "<ul>" +
+              r.stats.defectList
+                .map(function (d) {
+                  return (
+                    "<li><b>" +
+                    esc(d.itemName) +
+                    "</b> (" +
+                    esc(d.categoryName) +
+                    ")" +
+                    (d.note ? " — " + esc(d.note) : "") +
+                    "</li>"
+                  );
+                })
+                .join("") +
+              "</ul>"
+            : "<div style='color:#666'>אין ליקויים</div>";
+
+        body +=
+          '<div style="margin:12px 0 16px;padding:10px;border:1px solid #ccc;border-radius:8px;page-break-inside:avoid">' +
+          "<div><b>חדר " +
+          esc(r.roomNumber) +
+          "</b> · בדיקה " +
+          r.inspection.inspectionNumber +
+          " · " +
+          fmtDate(r.inspection.date) +
+          " · " +
+          (r.inspection.status === "completed" ? "הושלמה" : "בתהליך") +
+          (r.blocking ? " · <span style='color:#b42318'>מונע איכלוס</span>" : "") +
+          "</div>" +
+          "<div>ליקויים: " +
+          r.stats.defects +
+          "</div>" +
+          defects +
+          "</div>";
+      });
+
+      const html =
+        '<div class="pdf-root pdf-weekly" dir="rtl" style="font-family:Heebo,Arial,sans-serif;color:#111;padding:8px">' +
+        "<h1 style='color:#0b3a4a;margin:0 0 6px'>הלו״ז השבועי — The Yacht</h1>" +
+        "<div style='margin-bottom:10px;color:#5a6f78'>" +
+        fmtDate(bounds.startISO) +
+        " – " +
+        fmtDate(bounds.endISO) +
+        " (א׳–ש׳)</div>" +
+        "<div style='margin-bottom:14px'>בדיקות: " +
+        rows.length +
+        " · הושלמו: " +
+        completed +
+        " · סה״כ ליקויים: " +
+        defectTotal +
+        " · מונע איכלוס: " +
+        blocking +
+        " חדרים</div>" +
+        body +
+        "<div style='margin-top:16px;font-size:11px;color:#5a6f78'>" +
+        esc(COPYRIGHT()) +
+        "</div></div>";
+
+      const worker = document.getElementById("pdf-worker");
+      worker.innerHTML = html;
+      const root = worker.querySelector(".pdf-weekly");
+
+      const opt = {
+        margin: [10, 10, 14, 10],
+        filename: filename,
+        image: { type: "jpeg", quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        pagebreak: { mode: ["avoid-all", "css", "legacy"] }
+      };
+
+      const pdf = await html2pdf().set(opt).from(root).toPdf().get("pdf");
+      const blob = pdf.output("blob");
+      worker.innerHTML = "";
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () {
+        URL.revokeObjectURL(url);
+      }, 2000);
+
+      return { filename: filename, rows: rows.length };
     }
   };
 

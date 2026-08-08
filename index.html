@@ -100,6 +100,17 @@
         </div>
 
         <div class="home-section">
+          <h2 class="home-section-title">ניהול</h2>
+          <div class="home-grid home-grid-manage">
+            <button type="button" class="home-tile home-tile-manage" id="nav-weekly">
+              <span class="tile-icon" aria-hidden="true">▣</span>
+              <span class="tile-title">הלו״ז השבועי</span>
+              <span class="tile-desc">לוח תוצאות לישיבת מנהלים — מתעדכן אוטומטית</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="home-section">
           <h2 class="home-section-title">כלים</h2>
           <div class="home-grid home-grid-tools">
             <button type="button" class="home-tile" id="nav-saved">
@@ -129,6 +140,47 @@
             </button>
           </div>
         </div>
+      </section>
+
+      <!-- WEEKLY AGENDA -->
+      <section class="screen" data-screen="weekly" id="screen-weekly">
+        <button type="button" class="back-link" data-back="home">→ חזרה</button>
+        <h1 class="screen-title">הלו״ז השבועי</h1>
+        <p class="weekly-lead">לוח תוצאות לישיבת מנהלים — מתעדכן אוטומטית מכל בדיקת חדר.</p>
+
+        <div class="weekly-weekbar">
+          <button type="button" class="btn btn-secondary" id="btn-week-prev" aria-label="שבוע קודם">→</button>
+          <div class="weekly-week-label">
+            <strong id="weekly-week-title">השבוע הנוכחי</strong>
+            <span id="weekly-week-range" class="muted"></span>
+          </div>
+          <button type="button" class="btn btn-secondary" id="btn-week-next" aria-label="שבוע הבא">←</button>
+          <button type="button" class="btn btn-secondary" id="btn-week-today">השבוע</button>
+        </div>
+
+        <div class="weekly-stats" id="weekly-stats"></div>
+
+        <div class="weekly-filters" id="weekly-filters" role="toolbar" aria-label="סינון לו״ז">
+          <button type="button" class="chip is-active" data-weekly-filter="room-asc">חדר ↑</button>
+          <button type="button" class="chip" data-weekly-filter="date-desc">תאריך ↓</button>
+          <button type="button" class="chip" data-weekly-filter="date-asc">תאריך ↑</button>
+          <button type="button" class="chip" data-weekly-filter="completed">הושלמו</button>
+          <button type="button" class="chip" data-weekly-filter="in_progress">בתהליך</button>
+          <button type="button" class="chip" data-weekly-filter="defects">עם ליקויים</button>
+          <button type="button" class="chip" data-weekly-filter="blocking">מונע איכלוס</button>
+          <button type="button" class="chip" data-weekly-filter="all">הכל השבוע</button>
+        </div>
+
+        <label class="field weekly-search">
+          <span>חיפוש מספר חדר</span>
+          <input type="search" id="weekly-search" inputmode="numeric" placeholder="לדוגמה: 102" autocomplete="off">
+        </label>
+
+        <div class="weekly-actions-top">
+          <button type="button" class="btn btn-primary btn-block" id="btn-weekly-pdf">ייצוא סיכום שבועי ל־PDF</button>
+        </div>
+
+        <div id="weekly-list" class="weekly-list"></div>
       </section>
 
       <!-- NEW INSPECTION -->
