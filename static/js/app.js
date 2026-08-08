@@ -1,5 +1,5 @@
 /**
- * © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001
+ * © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001 | Release V0.02.0
  * Main application UI and navigation.
  */
 (function () {
@@ -1486,6 +1486,16 @@
     const copyEl = $("about-copyright");
     if (copyEl && APP_META && APP_META.copyright) {
       copyEl.textContent = APP_META.copyright;
+    }
+    const verEl = $("about-version");
+    if (verEl && APP_META) {
+      verEl.textContent =
+        (APP_META.version || "V0.02.0") +
+        " · " +
+        (APP_META.project || "WEB-HKR") +
+        " · " +
+        (APP_META.formName || "טופס בדיקת חדר") +
+        " · The Yacht";
     }
     showScreen("about");
   }

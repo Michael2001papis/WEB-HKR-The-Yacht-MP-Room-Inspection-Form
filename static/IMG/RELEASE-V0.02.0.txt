@@ -1,0 +1,9 @@
+# WEB-HKR The Yacht — binary assets stamp
+# Release V0.02.0
+# © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001
+#
+# Assets covered by this release (binary files cannot hold text headers):
+# - static/IMG/LOGO.png
+# - static/IMG/PCOG.jpg
+# - static/IMG/CCOG.jpg
+# - static/assets/Heebo.ttf

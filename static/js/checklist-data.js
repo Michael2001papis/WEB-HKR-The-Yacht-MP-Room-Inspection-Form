@@ -1,5 +1,5 @@
 /**
- * © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001
+ * © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001 | Release V0.02.0
  * Checklist categories and items — exact order and wording from the approved reject list.
  * optionalExists: items marked with ● on the source form.
  */
@@ -162,6 +162,7 @@ window.APP_META = {
   name: "בדיקת חדרים — The Yacht",
   formName: "טופס בדיקת חדר",
   project: "WEB-HKR-The-Yacht-MP-Room-Inspection-Form",
+  version: "V0.02.0",
   author: "MP מיכאל פפיסמדוב 2001",
   copyright: "© הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001"
 };

@@ -1,5 +1,5 @@
 /**
- * © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001
+ * © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001 | Release V0.02.0
  * PDF generation, preview, download, print and share.
  * Uses html2pdf.js so Hebrew RTL layout renders correctly.
  */

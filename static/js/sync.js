@@ -1,5 +1,5 @@
 /**
- * © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001
+ * © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001 | Release V0.02.0
  * Offline-first sync engine: local cache → Supabase (primary).
  * Queue + pull/push. Never deletes legacy localStorage key.
  */

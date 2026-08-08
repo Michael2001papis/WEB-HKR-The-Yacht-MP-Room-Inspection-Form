@@ -1,4 +1,4 @@
--- © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001
+-- © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001 | Release V0.02.0
 -- WEB-HKR Room Inspection — Supabase Free schema
 -- Run once in: Supabase Dashboard → SQL Editor → New query → Run
 -- Uses Free plan only. No Storage buckets. No paid add-ons.

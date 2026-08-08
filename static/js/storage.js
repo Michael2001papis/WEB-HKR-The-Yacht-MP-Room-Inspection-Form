@@ -1,5 +1,5 @@
 /**
- * © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001
+ * © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001 | Release V0.02.0
  * App storage layer — in-memory workspace + IndexedDB (YachtDB) primary.
  * localStorage kept as mirror/fallback for older browsers / emergency recovery.
  * Legacy key yacht-room-inspections-v1 is never deleted by this layer.

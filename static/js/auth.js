@@ -1,5 +1,5 @@
 /**
- * © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001
+ * © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001 | Release V0.02.0
  * Local gate auth (single user) + optional Supabase cloud session for sync.
  * Username + password checked locally; session in localStorage.
  * Auto sign-out after 90 minutes without activity.
