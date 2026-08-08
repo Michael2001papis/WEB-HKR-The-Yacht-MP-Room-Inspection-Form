@@ -1489,6 +1489,47 @@ body.is-auth .app-footer {
   height: 18px;
 }
 
+.done-card {
+  max-width: 420px;
+  margin: 24px auto 0;
+  padding: 22px 18px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(200, 164, 90, 0.45);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.done-kicker {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.done-title {
+  text-align: center;
+  margin-bottom: 8px !important;
+}
+
+.done-sub {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.done-actions .btn {
+  min-height: 52px;
+  font-size: 1.02rem;
+}
+
+.done-actions .btn-primary {
+  margin-bottom: 2px;
+}
+
 .item-row.is-focus-flash {
   outline: 2px solid var(--accent);
   box-shadow: 0 0 0 4px rgba(200, 164, 90, 0.25);

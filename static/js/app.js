@@ -1029,20 +1029,20 @@
     current.inspection.status = "completed";
     Storage.completeInspection(roomNumber, inspectionNumber);
 
-    const choice = window.prompt(
-      "הבדיקה נשמרה בהצלחה.\n\nמה תרצו עכשיו?\n1 = יצירת PDF\n2 = בדיקת חדר חדשה\n3 = מסך הבית\n\nהקלידו 1 / 2 / 3",
-      "3"
-    );
-    if (choice === "1") {
-      openPdfScreen(roomNumber, inspectionNumber);
-      return;
+    doneContext = {
+      roomNumber: roomNumber,
+      inspectionNumber: inspectionNumber
+    };
+
+    const sub = $("done-sub");
+    if (sub) {
+      sub.textContent =
+        "חדר " + roomNumber + " · בדיקה " + inspectionNumber + " — מה תרצו עכשיו?";
     }
-    if (choice === "2") {
-      openNewInspectionForm();
-      return;
-    }
-    renderHome();
+    showScreen("done");
   }
+
+  let doneContext = null;
 
   /* ---------- PDF screen ---------- */
   let pdfContext = null;
@@ -1243,6 +1243,22 @@
     $("btn-summary-pdf").onclick = function () {
       persistCurrent();
       openPdfScreen(current.roomNumber, current.inspectionNumber);
+    };
+
+    $("btn-done-pdf").onclick = function () {
+      if (!doneContext) {
+        renderHome();
+        return;
+      }
+      openPdfScreen(doneContext.roomNumber, doneContext.inspectionNumber);
+    };
+    $("btn-done-new").onclick = function () {
+      doneContext = null;
+      openNewInspectionForm();
+    };
+    $("btn-done-home").onclick = function () {
+      doneContext = null;
+      renderHome();
     };
 
     $("search-input").addEventListener("input", runSearch);
