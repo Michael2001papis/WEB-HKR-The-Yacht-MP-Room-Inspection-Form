@@ -29,8 +29,8 @@
 |------|--------|
 | Frontend | HTML + JavaScript סטטי (ללא build) |
 | עיצוב | CSS מותאם, RTL, עברית |
-| Auth | התחברות מקומית בדפדפן (`auth.js`) |
-| שמירה | localStorage במכשיר |
+| Auth | התחברות מקומית (`MP2001`) + סנכרון ענן אופציונלי |
+| שמירה | localStorage + Supabase (אם הוגדר) |
 | PDF | html2pdf.js (בדפדפן) |
 | Hosting | Vercel |
 
@@ -47,7 +47,11 @@
 
 אחרי **90 דקות ללא שימוש** מתבצעת התנתקות אוטומטית (צריך להתחבר מחדש). הנתונים במכשיר נשמרים.
 
-הגדרות נמצאות ב־`static/js/auth.js`.
+### סנכרון טלפון ↔ מחשב (אופציונלי)
+מלאו `url` + `anonKey` + `cloudEmail` ב־`static/js/supabase-config.js` לפי [`SUPABASE_SETUP.md`](./SUPABASE_SETUP.md).  
+בלי זה האפליקציה ממשיכה לעבוד מקומית בלבד.
+
+הגדרות התחברות: `static/js/auth.js`.
 
 ---
 

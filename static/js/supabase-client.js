@@ -1,15 +1,29 @@
 /**
- * Supabase client bootstrap (anon key only).
+ * Supabase client bootstrap (anon key only). Optional — app works without it.
  */
 (function (global) {
   function isConfigured() {
     const cfg = global.SUPABASE_CONFIG || {};
-    return !!(cfg.url && cfg.anonKey && String(cfg.url).trim() && String(cfg.anonKey).trim());
+    return !!(
+      cfg.url &&
+      cfg.anonKey &&
+      String(cfg.url).trim() &&
+      String(cfg.anonKey).trim()
+    );
+  }
+
+  function hasCloudEmail() {
+    const cfg = global.SUPABASE_CONFIG || {};
+    return !!(cfg.cloudEmail && String(cfg.cloudEmail).trim());
+  }
+
+  function isCloudReady() {
+    return isConfigured() && hasCloudEmail();
   }
 
   function getClient() {
     if (!isConfigured()) {
-      throw new Error("חסרים פרטי Supabase (URL / anon key) בקובץ supabase-config.js");
+      throw new Error("Supabase אינו מוגדר");
     }
     if (!global.supabase || typeof global.supabase.createClient !== "function") {
       throw new Error("ספריית Supabase לא נטענה");
@@ -20,7 +34,7 @@
         auth: {
           persistSession: true,
           autoRefreshToken: true,
-          detectSessionInUrl: true
+          detectSessionInUrl: false
         }
       });
     }
@@ -29,6 +43,7 @@
 
   global.SupabaseApp = {
     isConfigured: isConfigured,
+    isCloudReady: isCloudReady,
     getClient: getClient
   };
 })(window);

@@ -68,45 +68,66 @@
         <div class="home-hero">
           <p class="home-kicker">The Yacht</p>
           <h1 class="screen-title home-title">מסך הבית</h1>
-          <p class="home-sub">בחרו פעולה — הכל נשמר אוטומטית במכשיר</p>
+          <p class="home-sub" id="home-sub">בחרו פעולה להמשך העבודה</p>
         </div>
-        <div class="home-grid">
-          <button type="button" class="home-tile home-tile-primary" id="nav-new">
-            <span class="tile-icon" aria-hidden="true">＋</span>
-            <span class="tile-title">בדיקת חדר חדשה</span>
-            <span class="tile-desc">פתיחת טופס בדיקה חדש</span>
-          </button>
-          <button type="button" class="home-tile" id="nav-continue">
-            <span class="tile-icon" aria-hidden="true">↻</span>
-            <span class="tile-title">המשך בדיקה קיימת</span>
-            <span class="tile-desc">חזרה לבדיקה שטרם הסתיימה</span>
-            <span id="in-progress-count" class="tile-badge is-hidden"></span>
-          </button>
-          <button type="button" class="home-tile" id="nav-saved">
-            <span class="tile-icon" aria-hidden="true">☰</span>
-            <span class="tile-title">חדרים שמורים</span>
-            <span class="tile-desc">כל החדרים שנשמרו באפליקציה</span>
-          </button>
-          <button type="button" class="home-tile" id="nav-search">
-            <span class="tile-icon" aria-hidden="true">⌕</span>
-            <span class="tile-title">חיפוש חדר</span>
-            <span class="tile-desc">חיפוש מיידי לפי מספר חדר</span>
-          </button>
-          <button type="button" class="home-tile" id="nav-pdf">
-            <span class="tile-icon" aria-hidden="true">▤</span>
-            <span class="tile-title">יצירת PDF</span>
-            <span class="tile-desc">יצירת קובץ מתוך בדיקה שמורה</span>
-          </button>
-          <button type="button" class="home-tile" id="nav-full-pdf-backup">
-            <span class="tile-icon" aria-hidden="true">▣</span>
-            <span class="tile-title">גיבוי מלא ל־PDF</span>
-            <span class="tile-desc">כל החדרים וכל הבדיקות לקובץ אחד</span>
-          </button>
-          <button type="button" class="home-tile home-tile-muted" id="nav-about">
-            <span class="tile-icon" aria-hidden="true">ⓘ</span>
-            <span class="tile-title">אודות האפליקציה</span>
-            <span class="tile-desc">מידע קצר על המערכת</span>
-          </button>
+
+        <div class="home-section">
+          <h2 class="home-section-title">המשימה העיקרית</h2>
+          <div class="home-grid home-grid-primary">
+            <button type="button" class="home-tile home-tile-primary" id="nav-new">
+              <span class="tile-icon" aria-hidden="true">＋</span>
+              <span class="tile-title">בדיקת חדר חדשה</span>
+              <span class="tile-desc">פתיחת טופס בדיקה חדש</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="home-section">
+          <h2 class="home-section-title">עבודה מהירה</h2>
+          <div class="home-grid home-grid-secondary">
+            <button type="button" class="home-tile" id="nav-continue">
+              <span class="tile-icon" aria-hidden="true">↻</span>
+              <span class="tile-title">המשך בדיקה קיימת</span>
+              <span class="tile-desc">חזרה לבדיקה שטרם הסתיימה</span>
+              <span id="in-progress-count" class="tile-badge is-hidden"></span>
+            </button>
+            <button type="button" class="home-tile" id="nav-search">
+              <span class="tile-icon" aria-hidden="true">⌕</span>
+              <span class="tile-title">חיפוש חדר</span>
+              <span class="tile-desc">חיפוש מיידי לפי מספר חדר</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="home-section">
+          <h2 class="home-section-title">כלים</h2>
+          <div class="home-grid home-grid-tools">
+            <button type="button" class="home-tile" id="nav-saved">
+              <span class="tile-icon" aria-hidden="true">☰</span>
+              <span class="tile-title">חדרים שמורים</span>
+              <span class="tile-desc">כל החדרים שנשמרו</span>
+            </button>
+            <button type="button" class="home-tile" id="nav-pdf">
+              <span class="tile-icon" aria-hidden="true">▤</span>
+              <span class="tile-title">יצירת PDF</span>
+              <span class="tile-desc">קובץ מבדיקה שמורה</span>
+            </button>
+            <button type="button" class="home-tile" id="nav-full-pdf-backup">
+              <span class="tile-icon" aria-hidden="true">▣</span>
+              <span class="tile-title">גיבוי מלא ל־PDF</span>
+              <span class="tile-desc">כל החדרים לקובץ אחד</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="home-section home-section-muted">
+          <div class="home-grid">
+            <button type="button" class="home-tile home-tile-muted" id="nav-about">
+              <span class="tile-icon" aria-hidden="true">ⓘ</span>
+              <span class="tile-title">אודות האפליקציה</span>
+              <span class="tile-desc">מידע קצר על המערכת</span>
+            </button>
+          </div>
         </div>
       </section>
 
@@ -186,6 +207,19 @@
         <div class="insp-header">
           <h1 class="screen-title" id="insp-room-label">חדר</h1>
           <p class="insp-meta" id="insp-meta-label"></p>
+          <div class="insp-progress-wrap" aria-live="polite">
+            <div class="insp-progress-top">
+              <span id="insp-progress-label">התקדמות</span>
+              <span id="insp-progress-count">0/0</span>
+            </div>
+            <div class="insp-progress-track">
+              <div class="insp-progress-bar" id="insp-progress-bar" style="width:0%"></div>
+            </div>
+          </div>
+          <label class="fast-scan-toggle">
+            <input type="checkbox" id="fast-scan-mode" checked>
+            <span>סריקה מהירה — מעבר אוטומטי לפריט הבא</span>
+          </label>
         </div>
         <div class="form-card insp-meta-fields">
           <label class="field">
@@ -269,7 +303,8 @@
             ולצמצם שימוש מיותר בנייר.
           </p>
           <p>
-            כל שינוי נשמר אוטומטית במכשיר, וניתן ליצור קובץ PDF מסודר לשליחה או להדפסה.
+            כל שינוי נשמר אוטומטית במכשיר. אם מוגדר ענן (Supabase) — הנתונים מסונכרנים גם בין טלפון למחשב.
+            ניתן ליצור קובץ PDF מסודר לשליחה או להדפסה.
           </p>
         </div>
       </section>
@@ -283,6 +318,7 @@
   <div id="pdf-worker" aria-hidden="true"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="static/js/checklist-data.js"></script>
   <script src="static/js/supabase-config.js"></script>
   <script src="static/js/supabase-client.js"></script>

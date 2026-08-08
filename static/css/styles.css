@@ -1416,13 +1416,110 @@ body.is-auth .app-footer {
   box-shadow: var(--shadow-soft);
 }
 
+.home-section {
+  margin-bottom: 18px;
+}
+
+.home-section-title {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+}
+
+.home-grid-primary .home-tile-primary {
+  min-height: 132px;
+}
+
+.home-section-muted {
+  opacity: 0.95;
+}
+
+.insp-progress-wrap {
+  margin: 10px 0 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(200, 164, 90, 0.35);
+  box-shadow: var(--shadow-soft);
+}
+
+.insp-progress-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--brand);
+  margin-bottom: 8px;
+}
+
+.insp-progress-track {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(11, 58, 74, 0.1);
+  overflow: hidden;
+}
+
+.insp-progress-bar {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--brand), var(--brand-2), var(--accent));
+  transition: width 0.25s ease;
+}
+
+.fast-scan-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.82);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--brand);
+}
+
+.fast-scan-toggle input {
+  width: 18px;
+  height: 18px;
+}
+
+.item-row.is-focus-flash {
+  outline: 2px solid var(--accent);
+  box-shadow: 0 0 0 4px rgba(200, 164, 90, 0.25);
+}
+
+.category-card .category-body[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 420px) {
+  .home-tile {
+    animation: none;
+  }
+
+  .home-tile:nth-child(n) {
+    animation-delay: 0s;
+  }
+}
+
 @media (min-width: 640px) {
-  .home-grid {
+  .home-grid-secondary,
+  .home-grid-tools {
     grid-template-columns: 1fr 1fr;
   }
 
-  .home-tile-primary {
-    grid-column: 1 / -1;
+  .home-grid-tools {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .home-grid-primary .home-tile-primary {
+    grid-column: auto;
   }
 
   #app {

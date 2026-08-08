@@ -11,6 +11,7 @@
     inspection: null
   };
   let openCategories = {};
+  let fastScanEnabled = true;
 
   function $(id) {
     return document.getElementById(id);
@@ -114,6 +115,15 @@
   /* ---------- Home ---------- */
   function renderHome() {
     showScreen("home");
+    const sub = $("home-sub");
+    if (sub) {
+      if (Auth.isCloudConnected && Auth.isCloudConnected()) {
+        sub.textContent = "הנתונים מסונכרנים בין המכשירים";
+      } else {
+        sub.textContent = "בחרו פעולה — הכל נשמר אוטומטית במכשיר";
+      }
+    }
+
     const banner = $("continue-banner");
     const last = Storage.getLastActive();
     if (last && Storage.getInspection(last.roomNumber, last.inspectionNumber)) {
@@ -513,6 +523,12 @@
       renderHome();
       return;
     }
+    // Open first incomplete category (or first) so the form is usable immediately
+    const next = findNextIncompleteKey(null);
+    openCategories = {};
+    if (next) openCategories[next.cat.id] = true;
+    else if (CHECKLIST[0]) openCategories[CHECKLIST[0].id] = true;
+
     showScreen("inspection");
     renderInspectionHeader();
     renderChecklist();
@@ -561,6 +577,83 @@
     }
   }
 
+  function updateInspectionProgress() {
+    const label = $("insp-progress-label");
+    const countEl = $("insp-progress-count");
+    const bar = $("insp-progress-bar");
+    if (!current.inspection || !countEl || !bar) return;
+    let done = 0;
+    let total = 0;
+    let defects = 0;
+    CHECKLIST.forEach(function (cat) {
+      cat.items.forEach(function (item) {
+        const key = itemKey(cat.id, item.id);
+        const row = current.inspection.items[key];
+        if (item.optionalExists && row && row.exists === false) return;
+        if (item.optionalExists && (!row || row.exists !== true)) {
+          total++;
+          return;
+        }
+        total++;
+        if (row && row.status) {
+          done++;
+          if (row.status === "not_ok") defects++;
+        }
+      });
+    });
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    countEl.textContent = done + "/" + total;
+    bar.style.width = pct + "%";
+    if (label) {
+      label.textContent = defects ? "התקדמות · " + defects + " ליקויים" : "התקדמות";
+    }
+  }
+
+  function findNextIncompleteKey(afterKey) {
+    const keys = [];
+    CHECKLIST.forEach(function (cat) {
+      cat.items.forEach(function (item) {
+        keys.push({ cat: cat, item: item, key: itemKey(cat.id, item.id) });
+      });
+    });
+    let start = 0;
+    if (afterKey) {
+      for (let i = 0; i < keys.length; i++) {
+        if (keys[i].key === afterKey) {
+          start = i + 1;
+          break;
+        }
+      }
+    }
+    const order = keys.slice(start).concat(keys.slice(0, start));
+    for (let i = 0; i < order.length; i++) {
+      const entry = order[i];
+      const row = current.inspection.items[entry.key];
+      if (entry.item.optionalExists) {
+        if (!row || row.exists == null) return entry;
+        if (row.exists === false) continue;
+        if (!row.status) return entry;
+        continue;
+      }
+      if (!row || !row.status) return entry;
+    }
+    return null;
+  }
+
+  function jumpToItem(entry) {
+    if (!entry) return;
+    openCategories[entry.cat.id] = true;
+    renderChecklist();
+    const el = document.querySelector('[data-item-key="' + entry.key + '"]');
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("is-focus-flash");
+      setTimeout(function () {
+        el.classList.remove("is-focus-flash");
+      }, 900);
+    }
+  }
+
   function renderInspectionHeader() {
     const insp = current.inspection;
     $("insp-room-label").textContent = "חדר " + current.roomNumber;
@@ -576,6 +669,9 @@
       notesEl.value = insp.generalNotes || "";
       autoGrow(notesEl);
     }
+    const fast = $("fast-scan-mode");
+    if (fast) fast.checked = fastScanEnabled;
+    updateInspectionProgress();
   }
 
   function renderChecklist() {
@@ -583,10 +679,9 @@
     const insp = current.inspection;
     let html = "";
 
-    CHECKLIST.forEach(function (cat, catIndex) {
-      // Default: first category open; remember user toggles afterwards
-      const opened =
-        openCategories[cat.id] === undefined ? catIndex === 0 : !!openCategories[cat.id];
+    CHECKLIST.forEach(function (cat) {
+      // C3: keep categories collapsed by default for faster mobile paint
+      const opened = openCategories[cat.id] === true;
 
       let done = 0;
       let total = 0;
@@ -634,15 +729,18 @@
         cat.id +
         '">הכל תקין בקטגוריה זו</button>';
 
-      cat.items.forEach(function (item) {
-        html += renderItemRow(cat, item);
-      });
+      if (opened) {
+        cat.items.forEach(function (item) {
+          html += renderItemRow(cat, item);
+        });
+      }
 
       html += "</div></section>";
     });
 
     root.innerHTML = html;
     bindChecklistEvents(root);
+    updateInspectionProgress();
   }
 
   function ensureItemRow(key, item) {
@@ -760,13 +858,8 @@
     qsa("[data-toggle-cat]", root).forEach(function (btn) {
       btn.onclick = function () {
         const id = btn.dataset.toggleCat;
-        const card = btn.closest(".category-card");
-        const body = card.querySelector(".category-body");
-        const willOpen = body.hasAttribute("hidden");
-        openCategories[id] = willOpen;
-        body.hidden = !willOpen;
-        card.classList.toggle("is-open", willOpen);
-        btn.setAttribute("aria-expanded", willOpen ? "true" : "false");
+        openCategories[id] = !openCategories[id];
+        renderChecklist();
       };
     });
 
@@ -778,6 +871,10 @@
           markEmptyItemsOk(catId);
         });
         renderChecklist();
+        if (fastScanEnabled) {
+          const next = findNextIncompleteKey(null);
+          if (next) jumpToItem(next);
+        }
       };
     });
 
@@ -793,8 +890,11 @@
             row.note = "";
           }
         });
-        // Re-render only this item's category for responsiveness
         renderChecklist();
+        if (fastScanEnabled && exists === false) {
+          const next = findNextIncompleteKey(key);
+          if (next) jumpToItem(next);
+        }
       };
     });
 
@@ -805,15 +905,17 @@
         const row = current.inspection.items[key];
         const nextStatus = row.status === status ? null : status;
         scheduleSave(function () {
-          // Tap again on the same choice to clear the mark
           current.inspection.items[key].status = nextStatus;
         });
         renderChecklist();
         if (nextStatus === "not_ok") {
           const ta = document.getElementById("note-" + key);
-          if (ta) {
-            ta.focus();
-          }
+          if (ta) ta.focus();
+          return;
+        }
+        if (fastScanEnabled && nextStatus === "ok") {
+          const next = findNextIncompleteKey(key);
+          if (next) jumpToItem(next);
         }
       };
     });
@@ -829,6 +931,20 @@
           "is-required",
           current.inspection.items[key].status === "not_ok" && !ta.value.trim()
         );
+      });
+      ta.addEventListener("blur", function () {
+        const key = ta.dataset.note;
+        const row = current.inspection.items[key];
+        if (
+          fastScanEnabled &&
+          row &&
+          row.status === "not_ok" &&
+          row.note &&
+          row.note.trim()
+        ) {
+          const next = findNextIncompleteKey(key);
+          if (next) jumpToItem(next);
+        }
       });
       autoGrow(ta);
     });
@@ -908,9 +1024,23 @@
       alert("יש ליקויים ללא הסבר. יש להשלים לפני סיום.");
       return;
     }
+    const roomNumber = current.roomNumber;
+    const inspectionNumber = current.inspectionNumber;
     current.inspection.status = "completed";
-    Storage.completeInspection(current.roomNumber, current.inspectionNumber);
-    alert("הבדיקה נשמרה בהצלחה.");
+    Storage.completeInspection(roomNumber, inspectionNumber);
+
+    const choice = window.prompt(
+      "הבדיקה נשמרה בהצלחה.\n\nמה תרצו עכשיו?\n1 = יצירת PDF\n2 = בדיקת חדר חדשה\n3 = מסך הבית\n\nהקלידו 1 / 2 / 3",
+      "3"
+    );
+    if (choice === "1") {
+      openPdfScreen(roomNumber, inspectionNumber);
+      return;
+    }
+    if (choice === "2") {
+      openNewInspectionForm();
+      return;
+    }
     renderHome();
   }
 
@@ -1099,6 +1229,12 @@
       renderChecklist();
     };
     $("btn-to-summary").onclick = openSummary;
+    const fastScan = $("fast-scan-mode");
+    if (fastScan) {
+      fastScan.onchange = function () {
+        fastScanEnabled = !!fastScan.checked;
+      };
+    }
     $("btn-summary-edit").onclick = function () {
       showScreen("inspection");
       renderChecklist();
@@ -1191,6 +1327,20 @@
     Storage.replaceStore(legacy);
   }
 
+  /** If cloud user cache is empty, copy from previous local-only cache. */
+  function adoptLocalCacheToCloudUser(cloudUserId) {
+    if (!cloudUserId || cloudUserId === Auth.LOCAL_USER_ID) return;
+    Storage.setActiveUser(cloudUserId);
+    const cloudStore = Storage.getAll();
+    if (Object.keys((cloudStore && cloudStore.rooms) || {}).length) return;
+
+    Storage.setActiveUser(Auth.LOCAL_USER_ID);
+    const localStore = Storage.getAll();
+    Storage.setActiveUser(cloudUserId);
+    if (!Object.keys((localStore && localStore.rooms) || {}).length) return;
+    Storage.replaceStore(localStore);
+  }
+
   async function logoutUser(message) {
     try {
       persistCurrent();
@@ -1217,73 +1367,27 @@
     setSaveIndicator("idle");
   }
 
-  async function offerLegacyMigration() {
-    if (!SyncEngine.shouldOfferMigration()) return;
-    const counts = SyncEngine.countLegacyForPrompt();
-    if (!counts.rooms && !counts.inspections) return;
-    const mig = SyncEngine.getMigrationState();
-    const resume = mig.status === "in_progress";
-    const msg = resume
-      ? "העברת הנתונים מהמערכת הקודמת טרם הסתיימה. להמשיך מהנקודה שבה נעצרה?"
-      : "נמצאו במכשיר " +
-        counts.rooms +
-        " חדרים ו־" +
-        counts.inspections +
-        " בדיקות מהמערכת הקודמת. האם להעביר אותם לחשבון הנוכחי?";
-    const ok = confirm(
-      msg +
-        (resume
-          ? "\n\nאישור = המשך העברה | ביטול = לא עכשיו"
-          : "\n\nאישור = העבר לחשבון | ביטול = לא עכשיו")
-    );
-    if (!ok) return;
-    try {
-      setSaveIndicator("saving", "מעביר נתונים…");
-      const result = await SyncEngine.migrateLegacy(function (p) {
-        setSaveIndicator("saving", "מעביר… " + p.done + "/" + p.total);
-      });
-      if (result.incomplete || !result.ok) {
-        alert(
-          "ההעברה טרם הסתיימה (" +
-            (result.done || 0) +
-            " מתוך " +
-            (result.total || 0) +
-            "). הנתונים המקומיים נשמרו. אפשר להמשיך מאוחר יותר."
-        );
-        setSaveIndicator("pending");
-        return;
-      }
-      alert("הנתונים הועברו בהצלחה.");
-      setSaveIndicator("saved");
-      await SyncEngine.pullAll();
-    } catch (e) {
-      console.error(e);
-      alert(
-        "ההעברה נכשלה או נקטעה: " +
-          ((e && e.message) || "") +
-          "\nהנתונים המקומיים לא נמחקו."
-      );
-      setSaveIndicator("error");
-    }
-  }
-
   async function enterAppSession() {
     const user = Auth.getUser();
     if (!user) {
       showAuthScreen();
       return;
     }
-    Storage.setActiveUser(user.id);
+
+    if (Auth.isCloudConnected && Auth.isCloudConnected()) {
+      adoptLocalCacheToCloudUser(user.id);
+    } else {
+      Storage.setActiveUser(user.id);
+      adoptLegacyLocalDataIfNeeded();
+    }
+
     updateAccountBar(user);
-    adoptLegacyLocalDataIfNeeded();
     Auth.startIdleWatch();
 
-    // Local-only mode: keep SyncEngine hooks, but cloud pull/migration stay inactive
-    // while Supabase is not configured.
     SyncEngine.init();
     SyncEngine.onStatus(applySyncStatus);
 
-    if (window.SupabaseApp && SupabaseApp.isConfigured()) {
+    if (Auth.isCloudConnected && Auth.isCloudConnected()) {
       window.onSyncConflict = function (info) {
         alert(
           "נמצאה התנגשות בחדר " +
@@ -1297,16 +1401,21 @@
         );
       };
 
-      const pull = await SyncEngine.pullAll();
-      if (pull && pull.conflicts && pull.conflicts.length) {
-        pull.conflicts.forEach(function (info) {
-          if (typeof window.onSyncConflict === "function") {
-            window.onSyncConflict(info);
-          }
-        });
+      try {
+        setSaveIndicator("saving", "מסנכרן…");
+        const pull = await SyncEngine.pullAll();
+        if (pull && pull.conflicts && pull.conflicts.length) {
+          pull.conflicts.forEach(function (info) {
+            if (typeof window.onSyncConflict === "function") {
+              window.onSyncConflict(info);
+            }
+          });
+        }
+        SyncEngine.scheduleSync();
+      } catch (e) {
+        console.error(e);
+        setSaveIndicator("pending", "עובדים מקומית — הסנכרון יידחה");
       }
-
-      await offerLegacyMigration();
     }
 
     setSaveIndicator("idle");
