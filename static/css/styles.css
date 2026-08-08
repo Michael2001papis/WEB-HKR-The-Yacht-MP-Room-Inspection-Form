@@ -224,6 +224,64 @@ img {
   display: none;
 }
 
+.form-error:empty {
+  display: none;
+}
+
+/* Auth screen — phone (Galaxy S22 Ultra ~360–412px), tablet, desktop */
+#screen-auth {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+}
+
+#screen-auth .screen-title {
+  text-align: center;
+}
+
+#screen-auth .auth-lead {
+  text-align: center;
+}
+
+.auth-card {
+  width: 100%;
+  padding: 18px 16px;
+}
+
+#form-auth .field input {
+  font-size: 16px; /* avoid mobile focus-zoom */
+  min-height: 52px;
+}
+
+.auth-actions {
+  margin-top: 4px;
+}
+
+.auth-actions .btn {
+  width: 100%;
+  min-height: 52px;
+  font-size: 1.05rem;
+}
+
+@media (min-width: 600px) and (max-width: 1023px) {
+  #screen-auth {
+    max-width: 460px;
+    padding-top: 20px;
+  }
+
+  .auth-card {
+    padding: 22px 22px;
+  }
+}
+
+@media (min-width: 1024px) {
+  #screen-auth {
+    max-width: 440px;
+    padding-top: 28px;
+  }
+}
+
 .app-main {
   flex: 1;
   padding: 16px 16px 28px;

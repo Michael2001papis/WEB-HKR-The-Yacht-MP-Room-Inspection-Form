@@ -37,22 +37,21 @@
       <section class="screen is-active" data-screen="auth" id="screen-auth">
         <h1 class="screen-title">התחברות</h1>
         <p class="auth-lead" id="auth-lead">
-          התחברו עם שם המשתמש שלכם (למשל MP2001). הסיסמה מוזנת כאן בלבד — לא נשמרת בקוד.
+          הזינו שם משתמש וסיסמה כדי להיכנס לאפליקציה.
         </p>
-        <form class="form-card" id="form-auth" onsubmit="return false;">
+        <form class="form-card auth-card" id="form-auth" onsubmit="return false;">
           <label class="field">
             <span>שם משתמש</span>
-            <input type="text" id="auth-username" name="username" autocomplete="username" required placeholder="MP2001" autocapitalize="none" spellcheck="false">
+            <input type="text" id="auth-username" name="username" autocomplete="username" required placeholder="MP2001" autocapitalize="none" spellcheck="false" inputmode="text">
           </label>
           <label class="field">
             <span>סיסמה</span>
-            <input type="password" id="auth-password" autocomplete="current-password" required minlength="6">
+            <input type="password" id="auth-password" autocomplete="current-password" required>
           </label>
           <p class="form-error" id="auth-error" role="alert"></p>
           <p class="auth-hint" id="auth-hint"></p>
-          <div class="btn-row">
-            <button type="button" class="btn btn-primary" id="btn-auth-login">התחברות</button>
-            <button type="button" class="btn btn-secondary" id="btn-auth-signup">יצירת חשבון</button>
+          <div class="btn-row auth-actions">
+            <button type="submit" class="btn btn-primary btn-block" id="btn-auth-login">התחברות</button>
           </div>
         </form>
       </section>
@@ -260,7 +259,7 @@
             ולצמצם שימוש מיותר בנייר.
           </p>
           <p>
-            כל שינוי נשמר אוטומטית בחשבון שלכם (עם רשת ביטחון במכשיר), וניתן ליצור קובץ PDF מסודר לשליחה או להדפסה.
+            כל שינוי נשמר אוטומטית במכשיר, וניתן ליצור קובץ PDF מסודר לשליחה או להדפסה.
           </p>
         </div>
       </section>
@@ -274,7 +273,6 @@
   <div id="pdf-worker" aria-hidden="true"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="static/js/checklist-data.js"></script>
   <script src="static/js/supabase-config.js"></script>
   <script src="static/js/supabase-client.js"></script>

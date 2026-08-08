@@ -1047,11 +1047,10 @@
     };
     $("nav-about").onclick = openAbout;
 
-    $("btn-auth-login").onclick = function () {
-      submitAuth("login");
-    };
-    $("btn-auth-signup").onclick = function () {
-      submitAuth("signup");
+    $("form-auth").onsubmit = function (e) {
+      if (e && e.preventDefault) e.preventDefault();
+      submitAuth();
+      return false;
     };
     $("btn-logout").onclick = function () {
       logoutUser();
@@ -1157,61 +1156,37 @@
     const err = $("auth-error");
     if (err) err.textContent = "";
     if (hint) hint.textContent = message || "";
-    if (!window.SupabaseApp || !SupabaseApp.isConfigured()) {
-      if (err) {
-        err.textContent =
-          "חסרים פרטי Supabase. יש למלא URL, anon key, ואימייל עבור MP2001 ב־static/js/supabase-config.js ואז להריץ את supabase/schema.sql.";
-      }
-    } else {
-      const mp = Auth.lookupAccount && Auth.lookupAccount("MP2001");
-      if (mp && !mp.email && err && !err.textContent) {
-        err.textContent =
-          "יש למלא את כתובת האימייל של MP2001 ב־usernameAccounts בתוך supabase-config.js (בלי סיסמה).";
-      }
-    }
   }
 
-  async function submitAuth(mode) {
+  async function submitAuth() {
     const err = $("auth-error");
     const hint = $("auth-hint");
-    err.textContent = "";
-    hint.textContent = "";
+    if (err) err.textContent = "";
+    if (hint) hint.textContent = "";
     const loginId = $("auth-username").value.trim();
     const password = $("auth-password").value;
     if (!loginId || !password) {
-      err.textContent = "נא למלא שם משתמש וסיסמה.";
-      return;
-    }
-    if (password.length < 6) {
-      err.textContent = "הסיסמה חייבת להכיל לפחות 6 תווים.";
-      return;
-    }
-    const identity = Auth.resolveIdentity(loginId);
-    if (!identity.ok) {
-      err.textContent = identity.error;
+      if (err) err.textContent = "נא למלא שם משתמש וסיסמה.";
       return;
     }
     try {
       setSaveIndicator("saving", "מתחבר…");
-      if (mode === "signup") {
-        const data = await Auth.signUp(loginId, password);
-        if (data && data.user && !data.session) {
-          hint.textContent =
-            "החשבון נוצר. אם נדרש אימות אימייל בפרויקט Supabase — אשרו את המייל ואז התחברו. (מומלץ: Authentication → Providers → Email → כבו Confirm email לבדיקות.)";
-          setSaveIndicator("idle");
-          $("auth-password").value = "";
-          return;
-        }
-      } else {
-        await Auth.signIn(loginId, password);
-      }
+      await Auth.signIn(loginId, password);
       $("auth-password").value = "";
       await enterAppSession();
     } catch (e) {
       console.error(e);
-      err.textContent = (e && e.message) || "ההתחברות נכשלה";
+      if (err) err.textContent = (e && e.message) || "ההתחברות נכשלה";
       setSaveIndicator("idle");
     }
+  }
+
+  function adoptLegacyLocalDataIfNeeded() {
+    const currentStore = Storage.getAll();
+    if (Object.keys((currentStore && currentStore.rooms) || {}).length) return;
+    const legacy = Storage.getLegacyStore();
+    if (!Object.keys((legacy && legacy.rooms) || {}).length) return;
+    Storage.replaceStore(legacy);
   }
 
   async function logoutUser() {
@@ -1287,31 +1262,40 @@
     }
     Storage.setActiveUser(user.id);
     updateAccountBar(user);
+    adoptLegacyLocalDataIfNeeded();
+
+    // Local-only mode: keep SyncEngine hooks, but cloud pull/migration stay inactive
+    // while Supabase is not configured.
     SyncEngine.init();
     SyncEngine.onStatus(applySyncStatus);
-    window.onSyncConflict = function (info) {
-      alert(
-        "נמצאה התנגשות בחדר " +
-          info.roomNumber +
-          " – בדיקה " +
-          info.inspectionNumber +
-          ".\n" +
-          "הגרסה המקומית נשמרה. הגרסה מהשרת נשמרה כעותק בטוח בשם: " +
-          info.copyRoom +
-          ".\nשום הערה לא נמחקה."
-      );
-    };
 
-    const pull = await SyncEngine.pullAll();
-    if (pull && pull.conflicts && pull.conflicts.length) {
-      pull.conflicts.forEach(function (info) {
-        if (typeof window.onSyncConflict === "function") {
-          window.onSyncConflict(info);
-        }
-      });
+    if (window.SupabaseApp && SupabaseApp.isConfigured()) {
+      window.onSyncConflict = function (info) {
+        alert(
+          "נמצאה התנגשות בחדר " +
+            info.roomNumber +
+            " – בדיקה " +
+            info.inspectionNumber +
+            ".\n" +
+            "הגרסה המקומית נשמרה. הגרסה מהשרת נשמרה כעותק בטוח בשם: " +
+            info.copyRoom +
+            ".\nשום הערה לא נמחקה."
+        );
+      };
+
+      const pull = await SyncEngine.pullAll();
+      if (pull && pull.conflicts && pull.conflicts.length) {
+        pull.conflicts.forEach(function (info) {
+          if (typeof window.onSyncConflict === "function") {
+            window.onSyncConflict(info);
+          }
+        });
+      }
+
+      await offerLegacyMigration();
     }
 
-    await offerLegacyMigration();
+    setSaveIndicator("idle");
     renderHome();
   }
 
@@ -1319,11 +1303,6 @@
     $("app-title").textContent = APP_META.name;
     $("footer-copy").textContent = APP_META.copyright;
     bindGlobal();
-
-    if (!window.SupabaseApp || !SupabaseApp.isConfigured()) {
-      showAuthScreen();
-      return;
-    }
 
     try {
       await Auth.init();
@@ -1334,7 +1313,7 @@
       }
     } catch (e) {
       console.error(e);
-      showAuthScreen("לא ניתן להתחבר לשרת כרגע. הנתונים במכשיר לא נמחקו.");
+      showAuthScreen("לא ניתן להתחבר כרגע. הנתונים במכשיר לא נמחקו.");
     }
   }
 
