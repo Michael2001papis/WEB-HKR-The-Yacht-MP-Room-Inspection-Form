@@ -1,4 +1,5 @@
 /**
+ * © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001
  * Optional shared cloud (Supabase Free) — fill to sync phone ↔ computer.
  * Leave empty to keep local-only mode (no blocking errors).
  *

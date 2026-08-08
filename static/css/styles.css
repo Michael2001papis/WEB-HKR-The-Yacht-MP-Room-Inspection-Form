@@ -1,3 +1,5 @@
+﻿/* © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001 */
+
 :root {
   --bg0: #e8eef1;
   --bg1: #f5f8fa;
@@ -146,7 +148,7 @@ body.is-auth .app-header {
   border-radius: 8px;
   flex-shrink: 0;
   object-fit: contain;
-  background: #000;
+  background: #2a343a;
 }
 
 .brand-text {
@@ -1158,6 +1160,88 @@ body.is-auth .app-footer {
   margin-bottom: 0;
 }
 
+.about-hero {
+  text-align: center;
+  margin: 0 0 14px;
+  padding: 18px 14px 16px;
+  border-radius: var(--radius);
+  background:
+    linear-gradient(160deg, rgba(11, 58, 74, 0.92), rgba(26, 107, 124, 0.88)),
+    rgba(11, 58, 74, 0.9);
+  color: #fff;
+  box-shadow: var(--shadow);
+}
+
+.about-logo {
+  display: block;
+  margin: 0 auto 10px;
+  max-width: 160px;
+  height: auto;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
+}
+
+.about-eyebrow {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  opacity: 0.85;
+  font-weight: 600;
+}
+
+.about-product {
+  margin: 4px 0 6px;
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.about-tagline {
+  margin: 0;
+  font-size: 0.95rem;
+  opacity: 0.92;
+}
+
+.about-section-title {
+  margin: 0 0 10px;
+  font-size: 1.02rem;
+  color: var(--brand);
+  font-weight: 800;
+}
+
+.about-card + .about-card {
+  margin-top: 10px;
+}
+
+.about-list {
+  margin: 0;
+  padding: 0 18px 0 0;
+}
+
+.about-list li {
+  margin-bottom: 8px;
+  line-height: 1.45;
+}
+
+.about-list li:last-child {
+  margin-bottom: 0;
+}
+
+.about-card-rights {
+  border-color: rgba(200, 164, 90, 0.45);
+}
+
+.about-rights {
+  margin: 0 0 6px !important;
+  font-weight: 800;
+  color: var(--brand);
+  font-size: 1.05rem !important;
+}
+
+.about-rights-meta {
+  margin: 0 !important;
+  font-size: 0.88rem !important;
+}
+
 .filename-line {
   margin: 0 0 8px;
   color: var(--muted);
@@ -1933,6 +2017,14 @@ body.is-app:not(.is-entering) #app {
   margin-bottom: 8px;
 }
 
+.weekly-defect-list li.is-blocking-defect {
+  color: var(--bad);
+}
+
+.weekly-defect-list li.is-blocking-defect .status-pill {
+  vertical-align: middle;
+}
+
 .weekly-defect-note {
   margin-top: 2px;
   color: var(--muted);
@@ -1966,3 +2058,4 @@ body.is-app:not(.is-entering) #app {
     padding: 0;
   }
 }
+

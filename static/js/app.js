@@ -1,4 +1,5 @@
 /**
+ * © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001
  * Main application UI and navigation.
  */
 (function () {
@@ -1182,12 +1183,11 @@
         const date = insp.date || "";
         if (date < bounds.startISO || date > bounds.endISO) return;
         const stats = Storage.getStats(insp);
-        const blocking = stats.defects > 0;
         rows.push({
           roomNumber: room.roomNumber,
           inspection: insp,
           stats: stats,
-          blocking: blocking,
+          blocking: !!stats.blocking,
           key: room.roomNumber + "::" + insp.inspectionNumber
         });
       });
@@ -1212,9 +1212,13 @@
       list = list.filter(function (r) {
         return r.inspection.status === "in_progress";
       });
-    } else if (filter === "defects" || filter === "blocking") {
+    } else if (filter === "defects") {
       list = list.filter(function (r) {
         return r.stats.defects > 0;
+      });
+    } else if (filter === "blocking") {
+      list = list.filter(function (r) {
+        return r.blocking;
       });
     }
 
@@ -1297,6 +1301,8 @@
       if (r.stats.defects > 0) {
         withDefects++;
         defectTotal += r.stats.defects;
+      }
+      if (r.blocking) {
         blockingRooms[r.roomNumber] = true;
       }
     });
@@ -1346,11 +1352,16 @@
               r.stats.defectList
                 .map(function (d) {
                   return (
-                    "<li><strong>" +
+                    "<li" +
+                    (d.blocking ? ' class="is-blocking-defect"' : "") +
+                    "><strong>" +
                     escapeHtml(d.itemName) +
                     "</strong> <span class=\"muted\">(" +
                     escapeHtml(d.categoryName) +
                     ")</span>" +
+                    (d.blocking
+                      ? ' <span class="status-pill status-blocking">מונע איכלוס</span>'
+                      : "") +
                     (d.note
                       ? "<div class=\"weekly-defect-note\">" +
                         escapeHtml(d.note) +
@@ -1384,7 +1395,9 @@
           statusLabel +
           "</span>" +
           (r.blocking
-            ? '<span class="status-pill status-blocking">מונע איכלוס</span>'
+            ? '<span class="status-pill status-blocking">מונע איכלוס (' +
+              r.stats.blockingCount +
+              ")</span>"
             : "") +
           '<span class="status-pill">' +
           r.stats.defects +
@@ -1410,7 +1423,7 @@
           (open
             ? '<div class="weekly-card-details">' +
               (r.blocking
-                ? '<p class="weekly-blocking-note">ליקויים אלה מונעים איכלוס החדר עד לטיפול.</p>'
+                ? '<p class="weekly-blocking-note">ליקויים קריטיים (חשמל / שבור / נעילה / DND / נזילה / גבס קיר) מונעים איכלוס עד לטיפול.</p>'
                 : "") +
               defectsHtml +
               "</div>"
@@ -1470,6 +1483,10 @@
   }
 
   function openAbout() {
+    const copyEl = $("about-copyright");
+    if (copyEl && APP_META && APP_META.copyright) {
+      copyEl.textContent = APP_META.copyright;
+    }
     showScreen("about");
   }
 

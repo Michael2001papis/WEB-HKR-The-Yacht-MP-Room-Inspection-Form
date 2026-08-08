@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001 -->
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
@@ -360,25 +361,54 @@
       <section class="screen" data-screen="about" id="screen-about">
         <button type="button" class="back-link" data-back="home">→ חזרה</button>
         <h1 class="screen-title">אודות האפליקציה</h1>
+
+        <div class="about-hero">
+          <img src="static/IMG/LOGO.png" alt="THE YACHT" class="about-logo" width="160" height="50">
+          <p class="about-eyebrow">The Yacht · WEB-HKR</p>
+          <h2 class="about-product">בדיקת חדרים</h2>
+          <p class="about-tagline">טופס דיגיטלי לבדיקות חדר — במקום נייר מצולם.</p>
+        </div>
+
         <div class="about-card">
+          <h3 class="about-section-title">למה זה קיים</h3>
           <p>
-            האפליקציה נועדה להחליף את טופסי הנייר המצולמים בבדיקות חדרים בבית המלון.
+            האפליקציה נבנתה לעבודת שטח במלון The Yacht: לעבור על רשימת הריג'קטים המאושרת,
+            לסמן תקין / לא תקין, לתעד ליקויים, ולשמור תיעוד ברור לישיבת מנהלים.
           </p>
+        </div>
+
+        <div class="about-card">
+          <h3 class="about-section-title">מה אפשר לעשות</h3>
+          <ul class="about-list">
+            <li>בדיקת חדר חדשה (בדיקה 1 / בדיקה חוזרת)</li>
+            <li>המשך בדיקה בתהליך + חיפוש לפי מספר חדר</li>
+            <li>שמירה אוטומטית במכשיר (IndexedDB)</li>
+            <li>הלו״ז השבועי — לוח תוצאות לישיבת בוקר</li>
+            <li>סימון «מונע איכלוס» לליקויים קריטיים בלבד</li>
+            <li>יצירת PDF לחדר בודד, סיכום שבועי, או גיבוי מלא</li>
+          </ul>
+        </div>
+
+        <div class="about-card">
+          <h3 class="about-section-title">איך הנתונים נשמרים</h3>
           <p>
-            באמצעותה ניתן לשמור את בדיקות החדרים בצורה דיגיטלית, לחסוך זמן בעבודה היומיומית,
-            ולצמצם שימוש מיותר בנייר.
+            העבודה נשמרת מקומית במכשיר — גם בלי אינטרנט. אם מוגדר ענן (Supabase),
+            אפשר לסנכרן בין טלפון למחשב. מומלץ לייצא גיבוי PDF מדי פעם.
           </p>
-          <p>
-            כל שינוי נשמר אוטומטית במסד נתונים פנימי במכשיר (IndexedDB), עם גיבוי נוסף.
-            אם מוגדר ענן (Supabase) — הנתונים מסונכרנים גם בין טלפון למחשב.
-            ניתן ליצור קובץ PDF מסודר לשליחה או להדפסה.
+        </div>
+
+        <div class="about-card about-card-rights">
+          <h3 class="about-section-title">זכויות יוצרים</h3>
+          <p class="about-rights" id="about-copyright">
+            © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001
           </p>
+          <p class="about-rights-meta muted">פרויקט WEB-HKR · טופס בדיקת חדר · The Yacht</p>
         </div>
       </section>
     </main>
 
     <footer class="app-footer">
-      <span id="footer-copy">© כל הזכויות שמורות</span>
+      <span id="footer-copy">© הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001</span>
     </footer>
   </div>
 

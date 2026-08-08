@@ -1,4 +1,5 @@
 /**
+ * © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001
  * YachtDB — internal browser database (IndexedDB).
  * Primary durable store for rooms / inspections per user.
  * Survives larger datasets better than localStorage alone.

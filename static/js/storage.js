@@ -1,4 +1,5 @@
 /**
+ * © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001
  * App storage layer — in-memory workspace + IndexedDB (YachtDB) primary.
  * localStorage kept as mirror/fallback for older browsers / emergency recovery.
  * Legacy key yacht-room-inspections-v1 is never deleted by this layer.
@@ -178,14 +179,67 @@
     return store.rooms[key];
   }
 
+  /**
+   * Occupancy-blocking defects only (management rule):
+   * electricity · broken ceramic/glass/anything · main door won't lock ·
+   * DND not working · leak · gypsum wall defect.
+   * Cosmetic / other not_ok items do NOT block occupancy.
+   */
+  function isBlockingDefect(meta, note) {
+    if (!meta || !meta.category || !meta.item) return false;
+    const catId = meta.category.id;
+    const itemId = meta.item.id;
+    const itemName = String(meta.item.name || "");
+    const noteText = String(note || "");
+    const text = (itemName + " " + noteText).toLowerCase();
+    const rawText = itemName + " " + noteText;
+
+    // חשמל (כולל DND)
+    if (catId === "electrical") return true;
+
+    // דלת ראשית / נעילה
+    if (itemId === "entrance-door" || itemId === "lock-frame-latch") return true;
+
+    // פגם בגבס קיר — סעיפי קיר/גבס בקטגוריית גבס/צבע
+    if (catId === "plaster-paint") {
+      if (
+        itemId === "bed-gypsum-wall" ||
+        itemId === "vt-foyer-wall" ||
+        /קיר|גבס/.test(itemName)
+      ) {
+        return true;
+      }
+    }
+
+    // מילות מפתח בהערה / שם: שבור, נזילה, לא ננעל, DND
+    if (/שבור/.test(rawText)) return true;
+    if (/נזיל/.test(rawText)) return true;
+    if (/לא\s*ננעל/.test(rawText)) return true;
+    if (/\bdnd\b/i.test(text) && /לא\s*עובד|תקול|לא\s*תקין/.test(rawText)) {
+      return true;
+    }
+
+    return false;
+  }
+
   function getInspectionStats(inspection) {
     let checked = 0;
     let ok = 0;
     let defects = 0;
+    let blockingCount = 0;
     const defectList = [];
+    const blockingDefectList = [];
 
     if (!inspection || !inspection.items) {
-      return { checked: 0, ok: 0, defects: 0, defectList: [] };
+      return {
+        checked: 0,
+        ok: 0,
+        defects: 0,
+        blocking: false,
+        blockingCount: 0,
+        defectList: [],
+        blockingDefectList: []
+      };
     }
 
     for (const key of Object.keys(inspection.items)) {
@@ -202,16 +256,32 @@
       } else if (row.status === "not_ok") {
         checked++;
         defects++;
-        defectList.push({
+        const note = row.note || "";
+        const blocking = isBlockingDefect(meta, note);
+        const entry = {
           key: key,
           categoryName: meta.category.name,
           itemName: meta.item.name,
-          note: row.note || ""
-        });
+          note: note,
+          blocking: blocking
+        };
+        defectList.push(entry);
+        if (blocking) {
+          blockingCount++;
+          blockingDefectList.push(entry);
+        }
       }
     }
 
-    return { checked, ok, defects, defectList };
+    return {
+      checked,
+      ok,
+      defects,
+      blocking: blockingCount > 0,
+      blockingCount,
+      defectList,
+      blockingDefectList
+    };
   }
 
   function listMissingDefectNotes(inspection) {
@@ -722,6 +792,7 @@
     },
 
     getStats: getInspectionStats,
+    isBlockingDefect: isBlockingDefect,
     getMissingDefectNotes: listMissingDefectNotes
   };
 

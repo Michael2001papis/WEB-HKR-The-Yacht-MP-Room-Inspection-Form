@@ -1,4 +1,5 @@
 /**
+ * © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001
  * Supabase client bootstrap (anon key only). Optional — app works without it.
  */
 (function (global) {

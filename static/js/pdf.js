@@ -1,4 +1,5 @@
 /**
+ * © הזכויות שמורות ל-MP מיכאל פפיסמדוב 2001
  * PDF generation, preview, download, print and share.
  * Uses html2pdf.js so Hebrew RTL layout renders correctly.
  */
@@ -617,11 +618,14 @@
               r.stats.defectList
                 .map(function (d) {
                   return (
-                    "<li><b>" +
+                    "<li" +
+                    (d.blocking ? " style='color:#b42318'" : "") +
+                    "><b>" +
                     esc(d.itemName) +
                     "</b> (" +
                     esc(d.categoryName) +
                     ")" +
+                    (d.blocking ? " — מונע איכלוס" : "") +
                     (d.note ? " — " + esc(d.note) : "") +
                     "</li>"
                   );
