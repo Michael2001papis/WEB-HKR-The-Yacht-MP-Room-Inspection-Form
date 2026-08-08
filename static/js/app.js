@@ -28,6 +28,8 @@
     qsa(".screen").forEach(function (el) {
       el.classList.toggle("is-active", el.dataset.screen === name);
     });
+    document.body.classList.toggle("is-auth", name === "auth");
+    document.body.classList.toggle("is-app", name !== "auth");
     window.scrollTo(0, 0);
   }
 
@@ -1189,9 +1191,10 @@
     Storage.replaceStore(legacy);
   }
 
-  async function logoutUser() {
+  async function logoutUser(message) {
     try {
       persistCurrent();
+      Auth.stopIdleWatch();
       await Auth.signOut();
     } catch (e) {
       console.error(e);
@@ -1200,7 +1203,17 @@
     current.roomNumber = null;
     current.inspectionNumber = null;
     current.inspection = null;
-    showAuthScreen("התנתקתם בהצלחה.");
+    showAuthScreen(message || "התנתקתם בהצלחה.");
+    setSaveIndicator("idle");
+  }
+
+  function handleIdleTimeout() {
+    persistCurrent();
+    Storage.setActiveUser(null);
+    current.roomNumber = null;
+    current.inspectionNumber = null;
+    current.inspection = null;
+    showAuthScreen("התנתקתם אוטומטית אחרי 90 דקות ללא שימוש.");
     setSaveIndicator("idle");
   }
 
@@ -1263,6 +1276,7 @@
     Storage.setActiveUser(user.id);
     updateAccountBar(user);
     adoptLegacyLocalDataIfNeeded();
+    Auth.startIdleWatch();
 
     // Local-only mode: keep SyncEngine hooks, but cloud pull/migration stay inactive
     // while Supabase is not configured.
@@ -1303,11 +1317,14 @@
     $("app-title").textContent = APP_META.name;
     $("footer-copy").textContent = APP_META.copyright;
     bindGlobal();
+    Auth.onIdleTimeout(handleIdleTimeout);
 
     try {
       await Auth.init();
       if (Auth.isLoggedIn()) {
         await enterAppSession();
+      } else if (Auth.expiredOnInit) {
+        showAuthScreen("התנתקתם אוטומטית אחרי 90 דקות ללא שימוש.");
       } else {
         showAuthScreen();
       }

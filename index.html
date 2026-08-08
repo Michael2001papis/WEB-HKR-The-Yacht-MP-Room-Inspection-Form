@@ -9,13 +9,13 @@
   <title>בדיקת חדרים — The Yacht</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="static/css/styles.css">
   <link rel="icon" href="static/IMG/LOGO.png" type="image/png">
 </head>
-<body>
+<body class="is-auth">
   <div id="app">
-    <header class="app-header">
+    <header class="app-header" id="app-header">
       <button type="button" class="brand" id="btn-home-logo" aria-label="מסך הבית">
         <img src="static/IMG/LOGO.png" alt="THE YACHT" class="brand-logo" width="140" height="44">
         <div class="brand-text">
@@ -35,33 +35,43 @@
     <main class="app-main">
       <!-- AUTH -->
       <section class="screen is-active" data-screen="auth" id="screen-auth">
-        <h1 class="screen-title">התחברות</h1>
-        <p class="auth-lead" id="auth-lead">
-          הזינו שם משתמש וסיסמה כדי להיכנס לאפליקציה.
-        </p>
-        <form class="form-card auth-card" id="form-auth" onsubmit="return false;">
-          <label class="field">
-            <span>שם משתמש</span>
-            <input type="text" id="auth-username" name="username" autocomplete="username" required placeholder="MP2001" autocapitalize="none" spellcheck="false" inputmode="text">
-          </label>
-          <label class="field">
-            <span>סיסמה</span>
-            <input type="password" id="auth-password" autocomplete="current-password" required>
-          </label>
-          <p class="form-error" id="auth-error" role="alert"></p>
-          <p class="auth-hint" id="auth-hint"></p>
-          <div class="btn-row auth-actions">
-            <button type="submit" class="btn btn-primary btn-block" id="btn-auth-login">התחברות</button>
+        <div class="auth-shell">
+          <div class="auth-brand-block">
+            <img src="static/IMG/LOGO.png" alt="THE YACHT" class="auth-hero-logo" width="180" height="56">
+            <p class="auth-eyebrow">The Yacht</p>
+            <h1 class="screen-title auth-title">התחברות</h1>
+            <p class="auth-lead" id="auth-lead">
+              הזינו שם משתמש וסיסמה כדי להיכנס לאפליקציה.
+            </p>
           </div>
-        </form>
+          <form class="form-card auth-card" id="form-auth" onsubmit="return false;">
+            <label class="field">
+              <span>שם משתמש</span>
+              <input type="text" id="auth-username" name="username" autocomplete="username" required placeholder="MP2001" autocapitalize="none" spellcheck="false" inputmode="text">
+            </label>
+            <label class="field">
+              <span>סיסמה</span>
+              <input type="password" id="auth-password" autocomplete="current-password" required>
+            </label>
+            <p class="form-error" id="auth-error" role="alert"></p>
+            <p class="auth-hint" id="auth-hint"></p>
+            <div class="btn-row auth-actions">
+              <button type="submit" class="btn btn-primary btn-block" id="btn-auth-login">התחברות</button>
+            </div>
+          </form>
+        </div>
       </section>
 
       <!-- HOME -->
       <section class="screen" data-screen="home" id="screen-home">
         <div id="continue-banner" class="continue-banner is-hidden"></div>
-        <h1 class="screen-title">מסך הבית</h1>
+        <div class="home-hero">
+          <p class="home-kicker">The Yacht</p>
+          <h1 class="screen-title home-title">מסך הבית</h1>
+          <p class="home-sub">בחרו פעולה — הכל נשמר אוטומטית במכשיר</p>
+        </div>
         <div class="home-grid">
-          <button type="button" class="home-tile" id="nav-new">
+          <button type="button" class="home-tile home-tile-primary" id="nav-new">
             <span class="tile-icon" aria-hidden="true">＋</span>
             <span class="tile-title">בדיקת חדר חדשה</span>
             <span class="tile-desc">פתיחת טופס בדיקה חדש</span>
