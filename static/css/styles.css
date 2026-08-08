@@ -1620,6 +1620,149 @@ body.is-auth .app-footer {
   }
 }
 
+/* ---------- Welcome entrance (after login) ---------- */
+.app-entrance {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.app-entrance.is-hidden {
+  display: none !important;
+}
+
+.app-entrance-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 35%, rgba(26, 107, 124, 0.55), transparent 55%),
+    linear-gradient(160deg, #071820 0%, #0b3a4a 48%, #102229 100%);
+}
+
+.app-entrance-inner {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 24px;
+  max-width: 90vw;
+}
+
+.app-entrance-logo {
+  width: auto;
+  height: 64px;
+  max-width: min(240px, 72vw);
+  margin: 0 auto 18px;
+  border-radius: 14px;
+  background: #000;
+  opacity: 0;
+  transform: translateY(18px) scale(0.92);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+.app-entrance-line {
+  width: 0;
+  height: 2px;
+  margin: 0 auto 16px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+
+.app-entrance-brand,
+.app-entrance-hello,
+.app-entrance-tag {
+  margin: 0;
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.app-entrance-brand {
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.app-entrance-hello {
+  font-size: clamp(1.45rem, 5vw, 1.85rem);
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);
+}
+
+.app-entrance-tag {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.app-entrance.is-in .app-entrance-logo {
+  animation: entranceLogo 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.05s both;
+}
+
+.app-entrance.is-in .app-entrance-line {
+  animation: entranceLine 0.55s ease 0.35s both;
+}
+
+.app-entrance.is-in .app-entrance-brand {
+  animation: entranceText 0.5s ease 0.45s both;
+}
+
+.app-entrance.is-in .app-entrance-hello {
+  animation: entranceText 0.55s ease 0.58s both;
+}
+
+.app-entrance.is-in .app-entrance-tag {
+  animation: entranceText 0.5s ease 0.72s both;
+}
+
+.app-entrance.is-out {
+  animation: entranceFadeOut 0.6s ease both;
+}
+
+.app-entrance.is-out .app-entrance-inner {
+  animation: entranceInnerOut 0.55s ease both;
+}
+
+@keyframes entranceLogo {
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes entranceLine {
+  to { width: min(160px, 42vw); }
+}
+
+@keyframes entranceText {
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes entranceFadeOut {
+  to { opacity: 0; }
+}
+
+@keyframes entranceInnerOut {
+  to { transform: translateY(-16px) scale(1.02); opacity: 0; }
+}
+
+body.is-entering #app {
+  opacity: 0;
+}
+
+body.is-app:not(.is-entering) #app {
+  animation: appReveal 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes appReveal {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
 @media print {
   body {
     background: #fff;

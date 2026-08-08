@@ -1435,7 +1435,50 @@
     }
 
     setSaveIndicator("idle");
+    await playEntranceAnimation();
     renderHome();
+  }
+
+  function playEntranceAnimation() {
+    return new Promise(function (resolve) {
+      const gate = $("app-entrance");
+      const hello = $("entrance-hello");
+      if (!gate) {
+        resolve();
+        return;
+      }
+
+      const reduce =
+        window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const name = Auth.getDisplayName(Auth.getUser()) || "MP2001";
+      if (hello) hello.textContent = "שלום, " + name;
+
+      if (reduce) {
+        resolve();
+        return;
+      }
+
+      document.body.classList.add("is-entering");
+      gate.classList.remove("is-hidden", "is-out");
+      gate.classList.add("is-play");
+      gate.setAttribute("aria-hidden", "false");
+
+      // Force reflow so animation restarts cleanly on every login
+      void gate.offsetWidth;
+      gate.classList.add("is-in");
+
+      window.setTimeout(function () {
+        gate.classList.add("is-out");
+        window.setTimeout(function () {
+          gate.classList.add("is-hidden");
+          gate.classList.remove("is-play", "is-in", "is-out");
+          gate.setAttribute("aria-hidden", "true");
+          document.body.classList.remove("is-entering");
+          resolve();
+        }, 620);
+      }, 1550);
+    });
   }
 
   async function init() {
